@@ -183,7 +183,10 @@ export function Dashboard() {
                     bucket={bucket}
                     selectedPRId={selectedPRId}
                     newIds={newIds}
-                    onSelect={(id) => setSelectedPRId(id)}
+                    onSelect={(id) => {
+                      setSelectedPRId(id);
+                      setDetailOpen(true);
+                    }}
                     onOpen={(url) =>
                       window.open(url, '_blank', 'noopener,noreferrer')
                     }
