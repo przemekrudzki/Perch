@@ -7,21 +7,24 @@ items into "shipped" with the commit SHA.
 ## Shipped
 
 - [x] MVP dashboard with five action-oriented buckets (`a8fb7d4`)
-- [x] Strict TypeScript + 18 unit tests covering bucketing and transform
+- [x] Strict TypeScript + 20 unit tests covering bucketing and transform
 - [x] Team scope — broader view across tracked orgs (`08dc4d9`)
 - [x] Fix: teammate PRs you already reviewed land in Team, not Other (`0fcc398`)
 - [x] Fix: `e` shortcut reliably toggles the detail drawer (`1791e77`)
 - [x] Fix: drop PRs from archived repos across all fetch paths (`82b0551`)
-- [x] GitHub Actions deploy workflow (`e1b6afa`)
-- [x] Build version surfaced in Settings (SHA + branch + built-at) (`7786c32`)
+- [x] GitHub Actions deploy workflow with Node 24 opt-in
+      (`e1b6afa`, `d96c116`)
+- [x] Build version surfaced in Settings (SHA + branch + built-at)
+      (`7786c32`, dirty-probe skipped in CI in `62a36c1`)
 - [x] Live-update prompt when a new build is deployed (`4a1d483`, copy
       polish in `61886e1`)
 - [x] Tab badge + "new since last visit" indicator (`7299d85`)
-- [x] PR comments + reviews + diff stats in the detail drawer
-      (timeline thread matches Claude Design's pattern)
-- [x] Inline review comments in the timeline with `path:line` label
-      (also fixed dropping empty-body COMMENTED reviews that had
-      inline-only feedback)
+- [x] PR comments + reviews + diff stats in the detail drawer,
+      matching Claude Design's timeline pattern (`9467e6c`)
+- [x] Inline review comments in the timeline with `path:line` label;
+      also fixed dropping empty-body COMMENTED reviews that had
+      inline-only feedback (`22e1a1d`)
+- [x] ROADMAP + CLAUDE.md onboarding docs (`45def94`)
 
 ## Up next
 

@@ -128,6 +128,20 @@ identifiers — use the `.mono` and `.num` classes defined in
 
 - **`viewer.pullRequests` ignores `archived:false`.** It's a direct
   field, not a search. Filter archived repos in `transformDashboard`.
+- **GitHub has three comment mechanisms.** Don't assume one fetch
+  covers them all:
+  - `pr.comments` → general PR-level IssueComments
+  - `pr.reviews.nodes.body` → review-level summary text
+  - `pr.reviews.nodes.comments` → inline diff comments with `path`
+    and `line`
+  A reviewer leaving only inline nits creates a review with
+  `state=COMMENTED` and an *empty* body. Never drop such reviews
+  without checking their inline comments too.
+- **Query cost is cumulative.** Each PR fragment currently pulls
+  ~reviews(20) × comments(10) + issueComments(20) + 10 labels + 10
+  review requests + 5 assignees. Three top-level search queries
+  multiply that. Before adding more nested connections, think about
+  the rate-limit budget.
 - **Vite's `define` globals need a matching `declare const` in
   `src/types/env.d.ts`.** Don't forget to add Vite client types
   reference (`/// <reference types="vite/client" />`) if you introduce
