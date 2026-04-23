@@ -43,7 +43,7 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
     mergeable
     updatedAt
     createdAt
-    repository { nameWithOwner }
+    repository { nameWithOwner isArchived }
     author {
       login
       ... on User { avatarUrl }

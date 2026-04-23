@@ -61,7 +61,7 @@ export interface GqlPullRequest {
   mergeable: MergeableState;
   updatedAt: string;
   createdAt: string;
-  repository: { nameWithOwner: string };
+  repository: { nameWithOwner: string; isArchived: boolean };
   author: (GqlUser & { __typename?: string }) | null;
   assignees: { nodes: GqlUser[] };
   reviewRequests: { nodes: GqlReviewRequest[] };

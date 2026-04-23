@@ -245,14 +245,17 @@ export function transformDashboard(res: GqlDashboardResponse): {
   );
 
   const byId = new Map<string, GqlPullRequest>();
-  for (const pr of res.viewer.pullRequests.nodes) byId.set(pr.id, pr);
-  for (const pr of res.reviewRequested.nodes) {
-    if (pr && pr.id && !byId.has(pr.id)) byId.set(pr.id, pr);
-  }
+  const addNode = (pr: GqlPullRequest | null | undefined): void => {
+    if (!pr || !pr.id) return;
+    // Drop PRs from archived repos. `search` already filters these via
+    // `archived:false`, but the direct `viewer.pullRequests` field does not.
+    if (pr.repository?.isArchived) return;
+    if (!byId.has(pr.id)) byId.set(pr.id, pr);
+  };
+  for (const pr of res.viewer.pullRequests.nodes) addNode(pr);
+  for (const pr of res.reviewRequested.nodes) addNode(pr);
   if (res.teamPrs) {
-    for (const pr of res.teamPrs.nodes) {
-      if (pr && pr.id && !byId.has(pr.id)) byId.set(pr.id, pr);
-    }
+    for (const pr of res.teamPrs.nodes) addNode(pr);
   }
 
   const prs = Array.from(byId.values()).map((pr) =>
