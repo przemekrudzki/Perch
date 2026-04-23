@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
+import { formatDistanceToNowStrict } from 'date-fns';
 import { useUIStore } from '../store';
 import { redactToken } from '../lib/storage';
 import { Kbd } from './primitives';
+import { VERSION, commitUrl } from '../version';
 
 interface Props {
   rateLimit?: { remaining: number; resetAt: string };
@@ -248,6 +250,55 @@ export function Settings({ rateLimit }: Props) {
             </Group>
           )}
 
+          <Group title="Build">
+            <Row label="Version" meta="Click to open the commit on GitHub">
+              <a
+                href={commitUrl(VERSION.sha)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mono"
+                style={{
+                  fontSize: 12,
+                  color: VERSION.dirty ? 'var(--warn)' : 'var(--accent)',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+                title={VERSION.sha}
+              >
+                {VERSION.shortSha}
+                {VERSION.dirty && (
+                  <span style={{ color: 'var(--warn)' }}>·dirty</span>
+                )}
+                <ExternalLink size={10} />
+              </a>
+            </Row>
+            <Row label="Branch">
+              <span
+                className="mono"
+                style={{
+                  fontSize: 12,
+                  color:
+                    VERSION.branch === 'main'
+                      ? 'var(--fg-1)'
+                      : 'var(--warn)',
+                }}
+              >
+                {VERSION.branch}
+              </span>
+            </Row>
+            <Row label="Built">
+              <span
+                className="mono"
+                style={{ fontSize: 12, color: 'var(--fg-2)' }}
+                title={VERSION.builtAt}
+              >
+                {relBuildTime(VERSION.builtAt)}
+              </span>
+            </Row>
+          </Group>
+
           <Group title="Keyboard shortcuts">
             <ShortcutRow keys={['j', 'k']} label="Move selection down / up" />
             <ShortcutRow keys={['↵']} label="Open selected PR on GitHub" />
@@ -262,6 +313,14 @@ export function Settings({ rateLimit }: Props) {
       </div>
     </div>
   );
+}
+
+function relBuildTime(iso: string): string {
+  try {
+    return `${formatDistanceToNowStrict(new Date(iso))} ago`;
+  } catch {
+    return iso;
+  }
 }
 
 function Group({
