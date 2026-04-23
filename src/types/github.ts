@@ -35,6 +35,14 @@ export interface GqlReview {
   author: GqlUser | null;
   state: ReviewState;
   submittedAt: string | null;
+  body: string;
+}
+
+export interface GqlIssueComment {
+  id: string;
+  author: GqlUser | null;
+  body: string;
+  createdAt: string;
 }
 
 export interface GqlLabel {
@@ -61,12 +69,16 @@ export interface GqlPullRequest {
   mergeable: MergeableState;
   updatedAt: string;
   createdAt: string;
+  additions: number;
+  deletions: number;
+  changedFiles: number;
   repository: { nameWithOwner: string; isArchived: boolean };
   author: (GqlUser & { __typename?: string }) | null;
   assignees: { nodes: GqlUser[] };
   reviewRequests: { nodes: GqlReviewRequest[] };
   reviews: { nodes: GqlReview[] };
-  commits: { nodes: GqlCommit[] };
+  comments: { nodes: GqlIssueComment[] };
+  commits: { totalCount: number; nodes: GqlCommit[] };
   labels: { nodes: GqlLabel[] };
 }
 

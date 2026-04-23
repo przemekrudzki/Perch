@@ -1,10 +1,8 @@
 import { X, ExternalLink } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
-import type { DashboardPR } from '../types/dashboard';
+import type { DashboardPR, TimelineEvent } from '../types/dashboard';
 import {
-  ApprovalChip,
   Avatar,
-  CIStatusChip,
   DraftChip,
   LabelPill,
   TONE_STYLE,
@@ -201,6 +199,34 @@ export function PRDetail({ pr, onClose }: Props) {
             sub=""
           />
         </div>
+
+        {/* File stats strip — matches design's slim mono row. */}
+        <div
+          style={{
+            marginTop: 12,
+            display: 'flex',
+            gap: 16,
+            alignItems: 'center',
+            fontSize: 11.5,
+            color: 'var(--fg-2)',
+            fontFamily: 'var(--font-mono)',
+          }}
+        >
+          <span>
+            {pr.changedFiles} {pr.changedFiles === 1 ? 'file' : 'files'}
+          </span>
+          <span style={{ color: 'var(--ok)' }}>+{pr.additions}</span>
+          <span style={{ color: 'var(--err)' }}>−{pr.deletions}</span>
+          <span style={{ flex: 1 }} />
+          <span>
+            {pr.commitCount}{' '}
+            {pr.commitCount === 1 ? 'commit' : 'commits'}
+          </span>
+          <span>
+            {pr.reviewers.length}{' '}
+            {pr.reviewers.length === 1 ? 'reviewer' : 'reviewers'}
+          </span>
+        </div>
       </div>
 
       <div
@@ -211,6 +237,11 @@ export function PRDetail({ pr, onClose }: Props) {
         }}
         className="scroll-zone"
       >
+        <SectionLabel>Timeline</SectionLabel>
+        <Timeline events={pr.timeline} />
+
+        <div style={{ height: 20 }} />
+
         <SectionLabel>Reviewers ({pr.reviewers.length})</SectionLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {pr.reviewers.length === 0 && (
@@ -267,24 +298,6 @@ export function PRDetail({ pr, onClose }: Props) {
           })}
         </div>
 
-        <div style={{ height: 16 }} />
-        <SectionLabel>At a glance</SectionLabel>
-        <div
-          style={{
-            display: 'flex',
-            gap: 10,
-            alignItems: 'center',
-            fontSize: 12,
-            color: 'var(--fg-2)',
-          }}
-        >
-          <ApprovalChip
-            state={pr.approvalState}
-            done={pr.approvalCount}
-            total={Math.max(pr.reviewerCount, pr.approvalCount)}
-          />
-          <CIStatusChip state={pr.ciStatus} />
-        </div>
       </div>
 
       <div
@@ -407,6 +420,113 @@ function StatusCard({
           }}
         >
           {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Timeline({ events }: { events: TimelineEvent[] }) {
+  if (events.length === 0) {
+    return (
+      <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>
+        No activity yet.
+      </div>
+    );
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 11,
+          top: 8,
+          bottom: 8,
+          width: 1,
+          background: 'var(--line-2)',
+        }}
+      />
+      {events.map((e) => (
+        <TimelineItem key={e.id} event={e} />
+      ))}
+    </div>
+  );
+}
+
+const EVENT_META: Record<
+  TimelineEvent['kind'],
+  { dot: string; verb: string }
+> = {
+  opened: { dot: 'var(--fg-3)', verb: 'opened this PR' },
+  'review-approved': { dot: 'var(--ok)', verb: 'approved' },
+  'review-changes': { dot: 'var(--err)', verb: 'requested changes' },
+  'review-comment': { dot: 'var(--info)', verb: 'reviewed' },
+  comment: { dot: 'var(--info)', verb: 'commented' },
+};
+
+function TimelineItem({ event }: { event: TimelineEvent }) {
+  const meta = EVENT_META[event.kind];
+  const when = (() => {
+    try {
+      return formatDistanceToNowStrict(new Date(event.at)) + ' ago';
+    } catch {
+      return '';
+    }
+  })();
+  return (
+    <div style={{ position: 'relative', paddingLeft: 30, marginBottom: 12 }}>
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          left: 4,
+          top: 4,
+          width: 14,
+          height: 14,
+          borderRadius: '50%',
+          background: 'var(--bg-1)',
+          border: `2px solid ${meta.dot}`,
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          fontSize: 12,
+        }}
+      >
+        <Avatar user={event.author} size={16} />
+        <span style={{ color: 'var(--fg-0)', fontWeight: 500 }}>
+          @{event.author.login}
+        </span>
+        <span style={{ color: 'var(--fg-2)' }}>{meta.verb}</span>
+        <span style={{ flex: 1 }} />
+        <span
+          className="mono"
+          style={{ color: 'var(--fg-3)', fontSize: 10.5 }}
+          title={event.at}
+        >
+          {when}
+        </span>
+      </div>
+      {event.body && (
+        <div
+          style={{
+            marginTop: 6,
+            padding: '8px 10px',
+            background: 'var(--bg-2)',
+            border: '1px solid var(--line-1)',
+            borderRadius: 5,
+            fontSize: 12,
+            color: 'var(--fg-1)',
+            lineHeight: 1.5,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+          }}
+        >
+          {event.body}
         </div>
       )}
     </div>

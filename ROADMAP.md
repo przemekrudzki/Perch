@@ -17,15 +17,18 @@ items into "shipped" with the commit SHA.
 - [x] Live-update prompt when a new build is deployed (`4a1d483`, copy
       polish in `61886e1`)
 - [x] Tab badge + "new since last visit" indicator (`7299d85`)
+- [x] PR comments + reviews + diff stats in the detail drawer
+      (timeline thread matches Claude Design's pattern)
 
 ## Up next
 
-- [ ] **PR comments + diff stats in the detail drawer.** Add
-  `reviews.nodes.comments`, `additions`, `deletions` to the GraphQL
-  fragment. Wire into the drawer's timeline section (currently mock).
 - [ ] **Click a repo in the sidebar to scope the view.** The sidebar
   already lists repos with counts; make them filter pills that narrow
   every bucket to the selected repo.
+- [ ] **Inline review comments in the timeline.** We currently fetch
+  review bodies but not their inline diff comments. Add
+  `reviews.nodes.comments { path, line, body }` to surface reviewer
+  nits alongside the summary body.
 
 ## Ideas / parking lot
 

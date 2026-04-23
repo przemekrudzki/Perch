@@ -31,6 +31,21 @@ export interface DashboardLabel {
   color: string;
 }
 
+export type TimelineEventKind =
+  | 'opened'
+  | 'review-approved'
+  | 'review-changes'
+  | 'review-comment'
+  | 'comment';
+
+export interface TimelineEvent {
+  id: string;
+  kind: TimelineEventKind;
+  author: DashboardUser;
+  at: string;
+  body?: string;
+}
+
 export interface DashboardPR {
   id: string;
   number: number;
@@ -58,6 +73,12 @@ export interface DashboardPR {
   escalate: boolean;
   /** The review request for the viewer, set when viewer was requested. */
   viewerRequestedAt?: string;
+  additions: number;
+  deletions: number;
+  changedFiles: number;
+  commitCount: number;
+  /** Opened + reviews + comments, sorted by time ascending. */
+  timeline: TimelineEvent[];
 }
 
 export interface Bucket {

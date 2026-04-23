@@ -43,6 +43,9 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
     mergeable
     updatedAt
     createdAt
+    additions
+    deletions
+    changedFiles
     repository { nameWithOwner isArchived }
     author {
       login
@@ -66,9 +69,22 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
         }
         state
         submittedAt
+        body
+      }
+    }
+    comments(last: 20) {
+      nodes {
+        id
+        author {
+          login
+          ... on User { avatarUrl }
+        }
+        body
+        createdAt
       }
     }
     commits(last: 1) {
+      totalCount
       nodes {
         commit {
           statusCheckRollup { state }

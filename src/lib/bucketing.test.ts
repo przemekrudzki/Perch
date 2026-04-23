@@ -26,6 +26,11 @@ function makePR(overrides: Partial<DashboardPR> = {}): DashboardPR {
     reviewers: [],
     waitingTimeMs: 60 * 60 * 1000,
     escalate: false,
+    additions: 0,
+    deletions: 0,
+    changedFiles: 0,
+    commitCount: 1,
+    timeline: [],
   };
   return { ...base, ...overrides };
 }

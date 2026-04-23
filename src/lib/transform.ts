@@ -13,6 +13,8 @@ import type {
   DashboardReviewer,
   DashboardUser,
   LabelTone,
+  TimelineEvent,
+  TimelineEventKind,
 } from '../types/dashboard';
 
 const AV_KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -227,7 +229,73 @@ export function transformPR(
     reviewers,
     waitingTimeMs,
     escalate,
+    additions: pr.additions,
+    deletions: pr.deletions,
+    changedFiles: pr.changedFiles,
+    commitCount: pr.commits.totalCount,
+    timeline: buildTimeline(pr, author),
   };
+}
+
+/**
+ * Assemble the drawer timeline: opened + reviews (approved / changes /
+ * commented-with-body) + general issue comments, sorted ascending.
+ */
+function buildTimeline(
+  pr: GqlPullRequest,
+  author: DashboardUser
+): TimelineEvent[] {
+  const events: TimelineEvent[] = [
+    {
+      id: `${pr.id}-opened`,
+      kind: 'opened',
+      author,
+      at: pr.createdAt,
+    },
+  ];
+
+  for (const r of pr.reviews.nodes) {
+    if (!r.author || !r.submittedAt) continue;
+    let kind: TimelineEventKind | null = null;
+    switch (r.state) {
+      case 'APPROVED':
+        kind = 'review-approved';
+        break;
+      case 'CHANGES_REQUESTED':
+        kind = 'review-changes';
+        break;
+      case 'COMMENTED':
+        // Only surface inline-review summaries that had an actual body;
+        // empty COMMENTED reviews are typically created when a reviewer
+        // left inline nits and nothing to say at the top level.
+        if (r.body.trim().length === 0) continue;
+        kind = 'review-comment';
+        break;
+      default:
+        continue; // PENDING, DISMISSED
+    }
+    events.push({
+      id: `${pr.id}-review-${r.author.login}-${r.submittedAt}`,
+      kind,
+      author: toUser(r.author),
+      at: r.submittedAt,
+      body: r.body.trim() || undefined,
+    });
+  }
+
+  for (const c of pr.comments.nodes) {
+    if (!c.author || !c.body) continue;
+    events.push({
+      id: c.id,
+      kind: 'comment',
+      author: toUser(c.author),
+      at: c.createdAt,
+      body: c.body,
+    });
+  }
+
+  events.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  return events;
 }
 
 /**
