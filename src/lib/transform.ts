@@ -269,6 +269,9 @@ function buildTimeline(
       kind: 'opened',
       author,
       at: pr.createdAt,
+      // The PR description rides with the opened event so it reads as
+      // "author opened this PR saying X" in the timeline narrative.
+      body: pr.body?.trim() ? pr.body : undefined,
     },
   ];
 

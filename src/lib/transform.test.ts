@@ -19,6 +19,7 @@ function makeGqlPR(overrides: Partial<GqlPullRequest> = {}): GqlPullRequest {
     deletions: 0,
     changedFiles: 0,
     totalCommentsCount: 0,
+    body: '',
     repository: { nameWithOwner: 'example/repo', isArchived: false },
     author: { login: 'alice' },
     assignees: { nodes: [] },
@@ -106,6 +107,22 @@ describe('transformDashboard', () => {
       'comment',
     ]);
     expect(tl[1]!.body).toBe('Please fix the migration');
+  });
+
+  it('attaches the PR description to the opened timeline event', () => {
+    const pr = makeGqlPR({
+      body: 'Resolves KRIT-487. Migrates the LTI launcher to v1.3.',
+    });
+    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline;
+    expect(tl[0]!.kind).toBe('opened');
+    expect(tl[0]!.body).toContain('KRIT-487');
+  });
+
+  it('omits the opened body when the description is empty', () => {
+    const pr = makeGqlPR({ body: '   \n\n  ' });
+    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline;
+    expect(tl[0]!.kind).toBe('opened');
+    expect(tl[0]!.body).toBeUndefined();
   });
 
   it('flags merged PRs and preserves mergedAt', () => {

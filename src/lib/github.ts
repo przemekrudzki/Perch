@@ -61,6 +61,7 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
     deletions
     changedFiles
     totalCommentsCount
+    body
     repository { nameWithOwner isArchived }
     author {
       login

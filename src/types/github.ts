@@ -89,6 +89,8 @@ export interface GqlPullRequest {
   changedFiles: number;
   /** Total issue + review thread comments, as reported by GitHub. */
   totalCommentsCount: number;
+  /** Raw Markdown body of the PR description; may be empty string. */
+  body: string;
   repository: { nameWithOwner: string; isArchived: boolean };
   author: (GqlUser & { __typename?: string }) | null;
   assignees: { nodes: GqlUser[] };
