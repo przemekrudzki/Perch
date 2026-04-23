@@ -1,4 +1,4 @@
-export const REPO_URL = 'https://github.com/KiteRunner2/Perch';
+export const REPO_URL = 'https://github.com/przemekrudzki/Perch';
 
 export const VERSION = __APP_VERSION__;
 
