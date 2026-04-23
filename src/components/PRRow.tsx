@@ -1,6 +1,6 @@
-import type { CSSProperties, MouseEvent } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { formatDistanceToNowStrict } from 'date-fns';
-import type { DashboardPR } from '../types/dashboard';
+import type { DashboardPR, DashboardReviewer } from '../types/dashboard';
 import {
   ApprovalChip,
   Avatar,
@@ -10,6 +10,7 @@ import {
   EscalateGlyph,
   Kbd,
   LabelPill,
+  Tooltip,
 } from './primitives';
 
 interface PRRowProps {
@@ -182,11 +183,13 @@ export function PRRow({ pr, focused, isNew, onSelect, onOpen }: PRRowProps) {
           flexShrink: 0,
         }}
       >
-        <ApprovalChip
-          state={pr.approvalState}
-          done={pr.approvalCount}
-          total={Math.max(pr.reviewerCount, pr.approvalCount)}
-        />
+        <Tooltip content={<ApprovalTooltip pr={pr} />}>
+          <ApprovalChip
+            state={pr.approvalState}
+            done={pr.approvalCount}
+            total={Math.max(pr.reviewerCount, pr.approvalCount)}
+          />
+        </Tooltip>
         <CIStatusChip state={pr.ciStatus} compact />
         <AvatarStack users={pr.reviewers} max={3} size={18} />
       </div>
@@ -243,3 +246,89 @@ export function PRRow({ pr, focused, isNew, onSelect, onOpen }: PRRowProps) {
     </div>
   );
 }
+
+function ApprovalTooltip({ pr }: { pr: DashboardPR }) {
+  const { approvalState, approvalCount, reviewerCount, reviewers } = pr;
+
+  let headline: ReactNode;
+  if (approvalState === 'changes') {
+    headline = (
+      <span style={{ color: 'var(--err)' }}>Changes requested</span>
+    );
+  } else if (approvalState === 'approved') {
+    headline = (
+      <span style={{ color: 'var(--ok)' }}>
+        Approved by {approvalCount} of {reviewerCount}
+      </span>
+    );
+  } else if (reviewerCount === 0) {
+    headline = <span>No reviewers assigned</span>;
+  } else {
+    headline = (
+      <span>
+        {approvalCount} of {reviewerCount} approved
+      </span>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontWeight: 600, color: 'var(--fg-0)' }}>{headline}</div>
+      {reviewers.length > 0 && (
+        <div
+          style={{
+            marginTop: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3,
+          }}
+        >
+          {reviewers.map((r) => (
+            <ReviewerLine key={r.login} reviewer={r} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReviewerLine({ reviewer }: { reviewer: DashboardReviewer }) {
+  const meta = REVIEWER_STATE_META[reviewer.state];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        fontSize: 11,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          background: meta.color,
+          flexShrink: 0,
+        }}
+      />
+      <span className="mono" style={{ color: 'var(--fg-1)' }}>
+        @{reviewer.login}
+      </span>
+      <span style={{ flex: 1 }} />
+      <span style={{ color: meta.color }}>{meta.label}</span>
+    </div>
+  );
+}
+
+const REVIEWER_STATE_META: Record<
+  DashboardReviewer['state'],
+  { color: string; label: string }
+> = {
+  approved: { color: 'var(--ok)', label: 'approved' },
+  changes: { color: 'var(--err)', label: 'requested changes' },
+  commented: { color: 'var(--info)', label: 'commented' },
+  requested: { color: 'var(--fg-3)', label: 'awaiting' },
+  pending: { color: 'var(--fg-3)', label: 'pending' },
+};

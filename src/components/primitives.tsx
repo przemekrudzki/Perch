@@ -1,4 +1,6 @@
+import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import type {
   ApprovalState,
   CIStatus,
@@ -402,6 +404,97 @@ export function Kbd({ children }: { children: ReactNode }) {
     >
       {children}
     </span>
+  );
+}
+
+interface TooltipProps {
+  content: ReactNode;
+  children: ReactNode;
+  /** Hover delay before showing, ms. Default 150. */
+  delay?: number;
+}
+
+/**
+ * Lightweight hover tooltip. Renders into a portal so it escapes any
+ * scroll containers, and auto-flips above the trigger when close to
+ * the bottom of the viewport.
+ */
+export function Tooltip({ content, children, delay = 150 }: TooltipProps) {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const triggerRef = useRef<HTMLSpanElement>(null);
+  const timerRef = useRef<number | null>(null);
+
+  function show(): void {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(() => {
+      if (triggerRef.current) {
+        setRect(triggerRef.current.getBoundingClientRect());
+      }
+      setOpen(true);
+    }, delay);
+  }
+  function hide(): void {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    setOpen(false);
+  }
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        style={{ display: 'inline-flex' }}
+      >
+        {children}
+      </span>
+      {open && rect && createPortal(
+        <TooltipSurface rect={rect}>{content}</TooltipSurface>,
+        document.body
+      )}
+    </>
+  );
+}
+
+function TooltipSurface({
+  rect,
+  children,
+}: {
+  rect: DOMRect;
+  children: ReactNode;
+}) {
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const placeBelow = spaceBelow > 160;
+  const top = placeBelow ? rect.bottom + 6 : rect.top - 6;
+  const left = rect.left + rect.width / 2;
+  return (
+    <div
+      role="tooltip"
+      style={{
+        position: 'fixed',
+        top,
+        left,
+        transform: placeBelow ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
+        background: 'var(--bg-1)',
+        border: '1px solid var(--line-2)',
+        borderRadius: 6,
+        padding: '8px 10px',
+        fontSize: 11.5,
+        color: 'var(--fg-1)',
+        pointerEvents: 'none',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+        zIndex: 1000,
+        maxWidth: 280,
+        minWidth: 160,
+        lineHeight: 1.5,
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      {children}
+    </div>
   );
 }
 
