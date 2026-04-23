@@ -534,33 +534,48 @@ function TimelineItem({ event }: { event: TimelineEvent }) {
           {when}
         </span>
       </div>
-      {event.body && (
-        <div
-          style={{
-            marginTop: 6,
-            padding: '8px 10px',
-            background: 'var(--bg-2)',
-            border: '1px solid var(--line-1)',
-            borderRadius: 5,
-            fontSize: 12,
-            color: 'var(--fg-1)',
-            lineHeight: 1.5,
-            wordBreak: 'break-word',
-          }}
-        >
-          <CommentMarkdown body={event.body} />
-        </div>
-      )}
+      {event.body && <CommentBubble body={event.body} />}
+    </div>
+  );
+}
+
+function CommentBubble({ body }: { body: string }) {
+  const cleaned = stripRawHtml(body);
+  if (cleaned.length === 0) return null;
+  return (
+    <div
+      style={{
+        marginTop: 6,
+        padding: '8px 10px',
+        background: 'var(--bg-2)',
+        border: '1px solid var(--line-1)',
+        borderRadius: 5,
+        fontSize: 12,
+        color: 'var(--fg-1)',
+        lineHeight: 1.5,
+        wordBreak: 'break-word',
+      }}
+    >
+      <CommentMarkdown body={cleaned} />
     </div>
   );
 }
 
 /**
  * Render a GitHub comment body as styled Markdown.
- * Raw HTML is stripped (react-markdown default) so bot-generated
- * wrappers like `<!-- BUGBOT_REVIEW -->` and `<picture>` tags
- * disappear instead of leaking into the timeline.
+ * react-markdown v10 leaves raw HTML as text by default, so we strip
+ * HTML comments (bot markers like `<!-- BUGBOT_REVIEW -->`) and tags
+ * (like `<picture>` / `<img>` badges) before handing off to the
+ * renderer. Markdown links, images, code, etc. still work.
  */
+function stripRawHtml(body: string): string {
+  return body
+    .replace(/<!--[\s\S]*?-->/g, '') // comments, including multi-line
+    .replace(/<\/?[a-zA-Z][^>]*>/g, '') // tags
+    .replace(/\n{3,}/g, '\n\n') // collapse blank runs left by stripped blocks
+    .trim();
+}
+
 function CommentMarkdown({ body }: { body: string }) {
   return (
     <ReactMarkdown
