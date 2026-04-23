@@ -34,6 +34,10 @@ items into "shipped" with the commit SHA.
 - [x] Real viewer avatar in the sidebar card (`9b164d9`)
 - [x] "Recently merged" bucket — last 7 days of PRs you authored or
       reviewed, collapsed by default at the bottom
+- [x] Rename "In review" → "My PRs in review" so the scope is
+      obvious; hide Blocked / Ready / In review when empty so quiet
+      days don't render ceremonial blank sections (Waiting-on-me and
+      Stale still show when empty as positive signals)
 
 ## Up next
 

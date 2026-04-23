@@ -91,12 +91,14 @@ PRs are assigned to exactly one bucket, evaluated in priority order (first
 match wins):
 
 1. **Waiting on me** — you're a requested reviewer and haven't approved or
-   requested changes since the request.
+   requested changes since the request. Always visible (empty state is a
+   positive "all caught up" signal).
 2. **Blocked** — you're the author and a reviewer requested changes, or CI
-   is failing.
+   is failing. Hidden when empty.
 3. **Ready to merge** — you're the author, at least one approval, CI green,
-   `MERGEABLE`, not draft.
-4. **In review** — you're the author and the PR doesn't match the above.
+   `MERGEABLE`, not draft. Hidden when empty.
+4. **My PRs in review** — you're the author and the PR doesn't match the
+   above. Hidden when empty.
 5. **Stale** — a PR you're involved with that hasn't been updated in 7+
    days.
 6. **Team** — broader-scope PRs where you have no direct relation (only

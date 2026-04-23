@@ -61,7 +61,7 @@ export const BUCKET_PLAN: BucketPlan[] = [
   { id: 'waiting', title: 'Waiting on me', color: 'var(--bucket-primary)' },
   { id: 'ready', title: 'Ready to merge', color: 'var(--bucket-merge)' },
   { id: 'blocked', title: 'Blocked', color: 'var(--bucket-block)' },
-  { id: 'inreview', title: 'In review', color: 'var(--bucket-review)' },
+  { id: 'inreview', title: 'My PRs in review', color: 'var(--bucket-review)' },
   { id: 'stale', title: 'Stale', color: 'var(--bucket-stale)' },
   { id: 'team', title: 'Team', color: 'var(--info)' },
   { id: 'other', title: 'Other', color: 'var(--fg-3)' },

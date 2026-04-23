@@ -24,13 +24,10 @@ export function BucketSection({
   const collapsed = collapsedBuckets.has(bucket.id);
   const empty = bucket.items.length === 0;
 
-  // Don't render the catch-all / historical buckets unless they have items.
-  if (
-    (bucket.id === 'other' || bucket.id === 'team' || bucket.id === 'merged') &&
-    empty
-  ) {
-    return null;
-  }
+  // Hide most buckets when empty so a quiet day doesn't show five
+  // ceremonial empty sections. Waiting-on-me and Stale stay visible
+  // because their empty state is a positive signal ("all caught up").
+  if (HIDE_WHEN_EMPTY.has(bucket.id) && empty) return null;
 
   return (
     <section>
@@ -167,6 +164,15 @@ function BucketEmpty({ text }: { text: string }) {
     </div>
   );
 }
+
+const HIDE_WHEN_EMPTY = new Set<string>([
+  'ready',
+  'blocked',
+  'inreview',
+  'team',
+  'merged',
+  'other',
+]);
 
 export const EMPTY_TEXT: Record<string, string> = {
   waiting: "You're all caught up. Nothing waiting on you.",
