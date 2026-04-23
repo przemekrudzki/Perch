@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { useUIStore } from '../store';
 import { usePRs } from '../hooks/usePRs';
@@ -71,12 +71,12 @@ export function Dashboard() {
     }
   }, [filtered, selectedPRId, setSelectedPRId]);
 
-  useKeyboardNav({
-    buckets,
-    onRefresh: () => {
-      void query.refetch();
-    },
-  });
+  const refetch = query.refetch;
+  const onRefresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+
+  useKeyboardNav({ buckets, onRefresh });
 
   const totalOpen = query.data?.prs.length ?? 0;
   const isAuthError = query.error
@@ -175,10 +175,6 @@ export function Dashboard() {
                     onOpen={(url) =>
                       window.open(url, '_blank', 'noopener,noreferrer')
                     }
-                    onExpand={(id) => {
-                      setSelectedPRId(id);
-                      setDetailOpen(true);
-                    }}
                     emptyText={EMPTY_TEXT[bucket.id]}
                   />
                 ))

@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent, MouseEvent } from 'react';
+import type { CSSProperties, MouseEvent } from 'react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { DashboardPR } from '../types/dashboard';
 import {
@@ -16,8 +16,8 @@ interface PRRowProps {
   pr: DashboardPR;
   focused: boolean;
   onSelect: () => void;
+  /** Double-click opens the PR in a new tab. */
   onOpen: () => void;
-  onExpand: () => void;
 }
 
 function relTime(iso: string): string {
@@ -40,26 +40,19 @@ function relTime(iso: string): string {
   }
 }
 
-export function PRRow({ pr, focused, onSelect, onOpen, onExpand }: PRRowProps) {
+export function PRRow({ pr, focused, onSelect, onOpen }: PRRowProps) {
   const bg = focused ? 'var(--bg-3)' : 'transparent';
 
   function handleClick(e: MouseEvent<HTMLDivElement>) {
     if (e.defaultPrevented) return;
+    // Blur so focus doesn't get trapped on the row and steal keystrokes
+    // (`e`, `Enter`) from the global keyboard handler.
+    (e.currentTarget as HTMLElement).blur();
     onSelect();
   }
 
   function handleDoubleClick() {
     onOpen();
-  }
-
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'Enter') {
-      onOpen();
-      e.preventDefault();
-    } else if (e.key === 'e') {
-      onExpand();
-      e.preventDefault();
-    }
   }
 
   const rowStyle: CSSProperties = {
@@ -90,7 +83,6 @@ export function PRRow({ pr, focused, onSelect, onOpen, onExpand }: PRRowProps) {
       data-pr-id={pr.id}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      onKeyDown={handleKeyDown}
       style={rowStyle}
       onMouseEnter={(e) => {
         if (!focused) (e.currentTarget as HTMLElement).style.background = 'var(--bg-2)';

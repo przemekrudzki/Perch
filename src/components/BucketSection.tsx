@@ -7,7 +7,6 @@ interface Props {
   selectedPRId: string | null;
   onSelect: (id: string) => void;
   onOpen: (url: string) => void;
-  onExpand: (id: string) => void;
   emptyText?: string;
 }
 
@@ -16,7 +15,6 @@ export function BucketSection({
   selectedPRId,
   onSelect,
   onOpen,
-  onExpand,
   emptyText,
 }: Props) {
   const collapsedBuckets = useUIStore((s) => s.collapsedBuckets);
@@ -119,7 +117,6 @@ export function BucketSection({
                 focused={selectedPRId === pr.id}
                 onSelect={() => onSelect(pr.id)}
                 onOpen={() => onOpen(pr.url)}
-                onExpand={() => onExpand(pr.id)}
               />
             ))
           )}
