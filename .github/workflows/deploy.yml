@@ -5,6 +5,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Opt in to Node 24 for JS-based actions so they run on the newer runtime.
+# Without this, actions/checkout@v4 etc. emit a Node 20 deprecation warning.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 # Serialize deploys so overlapping pushes don't clobber each other.
 concurrency:
   group: deploy
