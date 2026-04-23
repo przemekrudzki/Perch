@@ -38,6 +38,10 @@ items into "shipped" with the commit SHA.
       obvious; hide Blocked / Ready / In review when empty so quiet
       days don't render ceremonial blank sections (Waiting-on-me and
       Stale still show when empty as positive signals)
+- [x] Comment count chip on each row with hover tooltip
+- [x] Clicking a row opens the detail drawer
+- [x] Render comment bodies as proper Markdown (react-markdown +
+      remark-gfm) so bot HTML wrappers don't leak into the timeline
 
 ## Up next
 

@@ -1,5 +1,7 @@
 import { X, ExternalLink } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { DashboardPR, TimelineEvent } from '../types/dashboard';
 import {
   Avatar,
@@ -543,13 +545,161 @@ function TimelineItem({ event }: { event: TimelineEvent }) {
             fontSize: 12,
             color: 'var(--fg-1)',
             lineHeight: 1.5,
-            whiteSpace: 'pre-wrap',
             wordBreak: 'break-word',
           }}
         >
-          {event.body}
+          <CommentMarkdown body={event.body} />
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Render a GitHub comment body as styled Markdown.
+ * Raw HTML is stripped (react-markdown default) so bot-generated
+ * wrappers like `<!-- BUGBOT_REVIEW -->` and `<picture>` tags
+ * disappear instead of leaking into the timeline.
+ */
+function CommentMarkdown({ body }: { body: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      components={{
+        p: ({ children }) => (
+          <p style={{ margin: '0 0 6px 0' }}>{children}</p>
+        ),
+        a: ({ children, href }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--accent)' }}
+          >
+            {children}
+          </a>
+        ),
+        ul: ({ children }) => (
+          <ul style={{ margin: '0 0 6px 0', paddingLeft: 20 }}>{children}</ul>
+        ),
+        ol: ({ children }) => (
+          <ol style={{ margin: '0 0 6px 0', paddingLeft: 20 }}>{children}</ol>
+        ),
+        li: ({ children }) => (
+          <li style={{ margin: '2px 0' }}>{children}</li>
+        ),
+        blockquote: ({ children }) => (
+          <blockquote
+            style={{
+              margin: '4px 0',
+              paddingLeft: 10,
+              borderLeft: '3px solid var(--line-3)',
+              color: 'var(--fg-2)',
+            }}
+          >
+            {children}
+          </blockquote>
+        ),
+        code: ({ className, children, ...rest }) => {
+          const isBlock = /language-/.test(className ?? '');
+          return (
+            <code
+              className={className}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                background: isBlock ? 'transparent' : 'var(--bg-3)',
+                padding: isBlock ? 0 : '1px 4px',
+                borderRadius: 3,
+              }}
+              {...rest}
+            >
+              {children}
+            </code>
+          );
+        },
+        pre: ({ children }) => (
+          <pre
+            style={{
+              margin: '6px 0',
+              padding: '8px 10px',
+              background: 'var(--bg-3)',
+              border: '1px solid var(--line-1)',
+              borderRadius: 5,
+              overflow: 'auto',
+              fontSize: 11,
+              lineHeight: 1.5,
+            }}
+          >
+            {children}
+          </pre>
+        ),
+        img: ({ src, alt }) => (
+          <img
+            src={src}
+            alt={alt ?? ''}
+            style={{
+              maxWidth: '100%',
+              borderRadius: 4,
+              margin: '4px 0',
+            }}
+          />
+        ),
+        h1: ({ children }) => (
+          <h3 style={{ margin: '8px 0 4px 0', fontSize: 13 }}>{children}</h3>
+        ),
+        h2: ({ children }) => (
+          <h3 style={{ margin: '8px 0 4px 0', fontSize: 13 }}>{children}</h3>
+        ),
+        h3: ({ children }) => (
+          <h3 style={{ margin: '8px 0 4px 0', fontSize: 12.5 }}>{children}</h3>
+        ),
+        table: ({ children }) => (
+          <div style={{ overflowX: 'auto', margin: '4px 0' }}>
+            <table
+              style={{
+                borderCollapse: 'collapse',
+                fontSize: 11,
+              }}
+            >
+              {children}
+            </table>
+          </div>
+        ),
+        th: ({ children }) => (
+          <th
+            style={{
+              border: '1px solid var(--line-2)',
+              padding: '4px 6px',
+              textAlign: 'left',
+              background: 'var(--bg-3)',
+            }}
+          >
+            {children}
+          </th>
+        ),
+        td: ({ children }) => (
+          <td
+            style={{
+              border: '1px solid var(--line-2)',
+              padding: '4px 6px',
+            }}
+          >
+            {children}
+          </td>
+        ),
+        hr: () => (
+          <hr
+            style={{
+              border: 'none',
+              borderTop: '1px solid var(--line-2)',
+              margin: '6px 0',
+            }}
+          />
+        ),
+      }}
+    >
+      {body}
+    </ReactMarkdown>
   );
 }
