@@ -97,22 +97,34 @@ function mapCI(state: string | null | undefined): CIStatus {
   }
 }
 
+interface LatestReview {
+  state: ReviewState;
+  submittedAt: string | null;
+  author: GqlUser;
+}
+
 /** Latest review-state per reviewer login (submitted reviews only). */
-function latestReviewByLogin(
-  pr: GqlPullRequest
-): Map<string, { state: ReviewState; submittedAt: string | null }> {
-  const map = new Map<string, { state: ReviewState; submittedAt: string | null }>();
+function latestReviewByLogin(pr: GqlPullRequest): Map<string, LatestReview> {
+  const map = new Map<string, LatestReview>();
   for (const r of pr.reviews.nodes) {
     if (!r.author) continue;
     const prev = map.get(r.author.login);
     if (!prev) {
-      map.set(r.author.login, { state: r.state, submittedAt: r.submittedAt });
+      map.set(r.author.login, {
+        state: r.state,
+        submittedAt: r.submittedAt,
+        author: r.author,
+      });
       continue;
     }
     const prevT = prev.submittedAt ? Date.parse(prev.submittedAt) : 0;
     const curT = r.submittedAt ? Date.parse(r.submittedAt) : 0;
     if (curT >= prevT) {
-      map.set(r.author.login, { state: r.state, submittedAt: r.submittedAt });
+      map.set(r.author.login, {
+        state: r.state,
+        submittedAt: r.submittedAt,
+        author: r.author,
+      });
     }
   }
   return map;
@@ -136,15 +148,16 @@ export function transformPR(
     if (r.state === 'CHANGES_REQUESTED') changesLogins.add(login);
   }
 
-  const requestedUserLogins: string[] = [];
+  const requestedUsers: GqlUser[] = [];
   for (const req of pr.reviewRequests.nodes) {
     const rr = req.requestedReviewer;
     if (!rr) continue;
     if ((rr as { __typename?: string }).__typename === 'User') {
       const u = rr as unknown as GqlUser;
-      requestedUserLogins.push(u.login);
+      requestedUsers.push(u);
     }
   }
+  const requestedUserLogins = requestedUsers.map((u) => u.login);
 
   const allReviewerLogins = new Set<string>([
     ...requestedUserLogins,
@@ -177,11 +190,11 @@ export function transformPR(
 
   const reviewers: DashboardReviewer[] = [];
   const seen = new Set<string>();
-  for (const login of requestedUserLogins) {
-    if (seen.has(login)) continue;
-    seen.add(login);
+  for (const u of requestedUsers) {
+    if (seen.has(u.login)) continue;
+    seen.add(u.login);
     reviewers.push({
-      ...toUser({ login }),
+      ...toUser(u),
       state: 'requested',
     });
   }
@@ -193,7 +206,7 @@ export function transformPR(
     else if (r.state === 'CHANGES_REQUESTED') s = 'changes';
     else if (r.state === 'COMMENTED') s = 'commented';
     reviewers.push({
-      ...toUser({ login }),
+      ...toUser(r.author),
       state: s,
       submittedAt: r.submittedAt ?? undefined,
     });

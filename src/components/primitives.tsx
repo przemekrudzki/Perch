@@ -81,27 +81,24 @@ export function AvatarStack({
   users,
   max = 3,
   size = 18,
+  gap = 4,
 }: {
   users: DashboardUser[];
   max?: number;
   size?: number;
+  /** Pixels between avatars. Positive = spaced, negative = overlapping. */
+  gap?: number;
 }) {
   const shown = users.slice(0, max);
   const over = users.length - shown.length;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap }}>
       {shown.map((u, i) => (
-        <span
-          key={`${u.login}-${i}`}
-          style={{ marginLeft: i === 0 ? 0 : -6, zIndex: shown.length - i }}
-        >
-          <Avatar user={u} size={size} ring />
-        </span>
+        <Avatar key={`${u.login}-${i}`} user={u} size={size} />
       ))}
       {over > 0 && (
         <span
           style={{
-            marginLeft: -6,
             width: size,
             height: size,
             borderRadius: '50%',
@@ -112,8 +109,8 @@ export function AvatarStack({
             justifyContent: 'center',
             fontSize: Math.round(size * 0.48),
             fontWeight: 600,
-            boxShadow: '0 0 0 2px var(--bg-1)',
             fontFamily: 'var(--font-sans)',
+            flexShrink: 0,
           }}
         >
           +{over}
