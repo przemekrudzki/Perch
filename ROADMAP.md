@@ -2,7 +2,9 @@
 
 Living list of what's shipped, what's next, and what we've explicitly
 chosen not to build. Check items off as they land and move "up next"
-items into "shipped" with the commit SHA.
+items into "shipped" with the commit SHA. The "Won't do" section is
+the load-bearing one — keeps scope conversations from getting
+re-litigated.
 
 ## Shipped
 
