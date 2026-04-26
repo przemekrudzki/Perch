@@ -11,11 +11,14 @@ export function Sidebar({
   viewerLogin,
   viewerAvatarUrl,
 }: SidebarProps) {
-  const mine = prs.filter((p) => p.viewerIsAuthor);
-  const reviewing = prs.filter((p) => !p.viewerIsAuthor);
+  // Exclude merged PRs from counts — Inbox/My PRs/Reviewing/repo
+  // tallies are about *open* work, not historical activity.
+  const open = prs.filter((p) => !p.isMerged);
+  const mine = open.filter((p) => p.viewerIsAuthor);
+  const reviewing = open.filter((p) => !p.viewerIsAuthor);
 
   const repoCounts = new Map<string, number>();
-  for (const pr of prs) {
+  for (const pr of open) {
     repoCounts.set(
       pr.repoNameWithOwner,
       (repoCounts.get(pr.repoNameWithOwner) ?? 0) + 1
@@ -26,7 +29,7 @@ export function Sidebar({
     .slice(0, 8);
 
   const views = [
-    { id: 'inbox', name: 'Inbox', count: prs.length, active: true },
+    { id: 'inbox', name: 'Inbox', count: open.length, active: true },
     { id: 'mine', name: 'My PRs', count: mine.length },
     { id: 'review', name: 'Reviewing', count: reviewing.length },
   ];

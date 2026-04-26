@@ -89,7 +89,8 @@ export function Dashboard() {
   );
   useTitleAndFavicon(waitingCount);
 
-  const totalOpen = query.data?.prs.length ?? 0;
+  const totalOpen =
+    query.data?.prs.filter((p) => !p.isMerged).length ?? 0;
   const isAuthError = query.error
     ? /bad credentials|401|unauthorized/i.test(query.error.message)
     : false;
