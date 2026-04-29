@@ -390,10 +390,11 @@ function BranchLine({ head, base }: { head: string; base: string }) {
 
 function CopyableBranch({ name }: { name: string }) {
   const [copied, setCopied] = useState(false);
+  const command = `git checkout ${name}`;
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(name);
+      await navigator.clipboard.writeText(command);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -424,8 +425,8 @@ function CopyableBranch({ name }: { name: string }) {
       <button
         type="button"
         onClick={copy}
-        title={copied ? 'Copied' : `Copy ${name}`}
-        aria-label={copied ? 'Copied' : 'Copy branch name'}
+        title={copied ? 'Copied' : `Copy "${command}"`}
+        aria-label={copied ? 'Copied' : `Copy ${command}`}
         style={{
           width: 20,
           height: 20,
