@@ -19,6 +19,26 @@ import type {
 
 const AV_KEYS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
+/**
+ * GitHub Apps post reviews under a `<name>[bot]` login. They aren't
+ * humans we should count toward an "N of M approved" ratio.
+ */
+export function isBotLogin(login: string | null | undefined): boolean {
+  if (!login) return false;
+  return login.endsWith('[bot]');
+}
+
+/** Should this login count toward reviewer/approval tallies on this PR? */
+function countsAsReviewer(
+  login: string,
+  authorLogin: string | null | undefined
+): boolean {
+  if (!login) return false;
+  if (login === authorLogin) return false;
+  if (isBotLogin(login)) return false;
+  return true;
+}
+
 /** Deterministic gradient picker from login — matches design's 8 avatar gradients. */
 export function avatarKey(login: string): string {
   if (!login) return 'a';
@@ -139,11 +159,16 @@ export function transformPR(
   viewerLogin: string,
   reviewRequestedSet: Set<string>
 ): DashboardPR {
+  const authorLogin = pr.author?.login;
+  const isCountable = (login: string): boolean =>
+    countsAsReviewer(login, authorLogin);
+
   const latestByLogin = latestReviewByLogin(pr);
   const approvedLogins = new Set<string>();
   const changesLogins = new Set<string>();
 
   for (const [login, r] of latestByLogin) {
+    if (!isCountable(login)) continue;
     if (r.state === 'APPROVED') approvedLogins.add(login);
     if (r.state === 'CHANGES_REQUESTED') changesLogins.add(login);
   }
@@ -154,6 +179,7 @@ export function transformPR(
     if (!rr) continue;
     if ((rr as { __typename?: string }).__typename === 'User') {
       const u = rr as unknown as GqlUser;
+      if (!isCountable(u.login)) continue;
       requestedUsers.push(u);
     }
   }
@@ -161,7 +187,7 @@ export function transformPR(
 
   const allReviewerLogins = new Set<string>([
     ...requestedUserLogins,
-    ...latestByLogin.keys(),
+    ...Array.from(latestByLogin.keys()).filter(isCountable),
   ]);
 
   const approvalCount = approvedLogins.size;
@@ -199,6 +225,7 @@ export function transformPR(
     });
   }
   for (const [login, r] of latestByLogin) {
+    if (!isCountable(login)) continue;
     if (seen.has(login)) continue;
     seen.add(login);
     let s: DashboardReviewer['state'] = 'pending';

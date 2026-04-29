@@ -109,6 +109,71 @@ describe('transformDashboard', () => {
     expect(tl[1]!.body).toBe('Please fix the migration');
   });
 
+  it('excludes the PR author from reviewer/approval tallies', () => {
+    // Author somehow surfaces in the reviews connection (e.g. they
+    // submitted review-thread comments on their own PR).
+    const pr = makeGqlPR({
+      author: { login: 'alice' },
+      reviews: {
+        nodes: [
+          {
+            id: 'R1',
+            author: { login: 'alice' },
+            state: 'COMMENTED',
+            submittedAt: '2026-04-25T10:00:00Z',
+            body: 'self-note',
+            comments: { nodes: [] },
+          },
+          {
+            id: 'R2',
+            author: { login: 'bob' },
+            state: 'APPROVED',
+            submittedAt: '2026-04-25T11:00:00Z',
+            body: '',
+            comments: { nodes: [] },
+          },
+        ],
+      },
+    });
+    const out = transformDashboard(makeResponse([pr])).prs[0]!;
+    expect(out.approvalCount).toBe(1);
+    expect(out.reviewerCount).toBe(1); // not 2 — author shouldn't count
+    expect(out.reviewers.map((r) => r.login)).toEqual(['bob']);
+  });
+
+  it('excludes [bot] reviewers from approval tallies but keeps them in the timeline', () => {
+    const pr = makeGqlPR({
+      author: { login: 'alice' },
+      reviews: {
+        nodes: [
+          {
+            id: 'R1',
+            author: { login: 'cursor[bot]' },
+            state: 'COMMENTED',
+            submittedAt: '2026-04-25T10:00:00Z',
+            body: 'Cursor Bugbot has reviewed your changes.',
+            comments: { nodes: [] },
+          },
+          {
+            id: 'R2',
+            author: { login: 'bob' },
+            state: 'APPROVED',
+            submittedAt: '2026-04-25T11:00:00Z',
+            body: '',
+            comments: { nodes: [] },
+          },
+        ],
+      },
+    });
+    const out = transformDashboard(makeResponse([pr])).prs[0]!;
+    expect(out.approvalCount).toBe(1);
+    expect(out.reviewerCount).toBe(1); // bot doesn't count
+    expect(out.reviewers.map((r) => r.login)).toEqual(['bob']);
+    // Timeline should still surface what the bot said
+    const reviewKinds = out.timeline.map((e) => e.kind);
+    expect(reviewKinds).toContain('review-comment');
+  });
+
   it('attaches the PR description to the opened timeline event', () => {
     const pr = makeGqlPR({
       body: 'Resolves KRIT-487. Migrates the LTI launcher to v1.3.',

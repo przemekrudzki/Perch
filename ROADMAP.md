@@ -57,6 +57,9 @@ items into "shipped" with the commit SHA.
 - [x] Pinned-tab freshness signal: blue favicon dot + "• Perch — Inbox"
       title prefix when there's new activity (new PRs / new comments)
       but no PRs are waiting on you
+- [x] Exclude the PR author and `[bot]` reviewers (Cursor Bugbot,
+      Dependabot, etc.) from approval ratio + reviewer avatars; bots
+      still surface in the drawer timeline
 
 ## Up next
 

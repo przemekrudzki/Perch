@@ -143,6 +143,12 @@ identifiers — use the `.mono` and `.num` classes defined in
   (viewer.pullRequests, reviewRequested, teamPrs when Team scope is
   on, and recentlyMerged) multiply that. Before adding more nested
   connections, think about the rate-limit budget.
+- **Reviewer counts exclude the PR author and `[bot]` accounts.**
+  `transform.ts` filters both out of `approvalCount` / `reviewerCount`
+  / the `reviewers` array surfaced on each row. Bots still appear in
+  the timeline (so users can read what they said), but they don't
+  inflate "1/2 approved" style chips. See `countsAsReviewer` /
+  `isBotLogin` in `src/lib/transform.ts`.
 - **Merged vs open PRs.** `viewer.pullRequests` and `reviewRequested`
   only return OPEN PRs. Merged PRs arrive via the separate
   `recentlyMerged` search. They short-circuit bucketing (first rule
