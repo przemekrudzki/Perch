@@ -62,6 +62,18 @@ items into "shipped" with the commit SHA.
       still surface in the drawer timeline
 - [x] Branch line in the drawer (`head → base`) with a one-click
       copy button on the source branch name
+- [x] End-to-end PR review inside Perch (`1307e52`):
+      - Diff tab in the drawer alongside Timeline. File list with
+        kind glyphs, ±line bars, comment counts, mark-as-viewed,
+        Hide-generated toggle. Sticky "currently viewing" bar with
+        prev/next file buttons. Unified diff with per-side comment
+        anchoring (no more duplicates when old/new line numbers
+        match). Lazy REST fetch on first open, cached 10 min.
+      - Drawer promoted from right-edge to centered modal with a
+        dim backdrop, click-outside-to-close.
+      - Prev/next chevrons + `3/27` counter in the modal header so
+        you can walk PRs without closing. Arrow keys (←/→/↑/↓)
+        added as a modal-y alias for j/k.
 
 ## Up next
 
