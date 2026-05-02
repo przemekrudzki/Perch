@@ -5,7 +5,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { ChevronDown, Check, ExternalLink } from 'lucide-react';
+import { Check, ExternalLink } from 'lucide-react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -91,7 +91,6 @@ function DiffTabBody({
   totalFiles: number;
 }): JSX.Element {
   const [hideGenerated, setHideGenerated] = useState(true);
-  const [listExpanded, setListExpanded] = useState(true);
   const [viewedSet, setViewedSet] = useState<Set<string>>(() =>
     loadViewedFiles(pr.id)
   );
@@ -221,13 +220,17 @@ function DiffTabBody({
     <div
       style={{
         display: 'flex',
-        flexDirection: 'column',
+        // Left rail (file list) + right pane (diff content). Both
+        // scroll independently. The rail stays in view as the user
+        // moves through long files, and gives more vertical space to
+        // the diff itself than a top-of-pane file list did.
+        flexDirection: 'row',
         flex: 1,
         minHeight: 0,
         background: 'var(--bg-0)',
       }}
     >
-      <FileList
+      <FilePane
         files={files}
         visibleFiles={visibleFiles}
         activePath={activePath}
@@ -237,8 +240,6 @@ function DiffTabBody({
         hideGenerated={hideGenerated}
         onToggleGenerated={() => setHideGenerated((v) => !v)}
         hiddenCount={hiddenCount}
-        expanded={listExpanded}
-        onToggleExpanded={() => setListExpanded((v) => !v)}
         commentCount={(path) =>
           countCommentsForPath(inlineComments, path)
         }
@@ -246,7 +247,12 @@ function DiffTabBody({
 
       <div
         ref={scrollRef}
-        style={{ flex: 1, overflow: 'auto', minHeight: 0 }}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          minHeight: 0,
+          minWidth: 0,
+        }}
         data-diff-scroll
       >
         <StickyFileBar
@@ -279,9 +285,11 @@ function DiffTabBody({
   );
 }
 
-// ─── File list (collapsible, top of pane) ───────────────────────────
+// ─── File pane (left rail, full-height) ─────────────────────────────
 
-function FileList({
+const FILE_PANE_WIDTH = 280;
+
+function FilePane({
   files,
   visibleFiles,
   activePath,
@@ -291,8 +299,6 @@ function FileList({
   hideGenerated,
   onToggleGenerated,
   hiddenCount,
-  expanded,
-  onToggleExpanded,
   commentCount,
 }: {
   files: DiffFile[];
@@ -304,16 +310,18 @@ function FileList({
   hideGenerated: boolean;
   onToggleGenerated: () => void;
   hiddenCount: number;
-  expanded: boolean;
-  onToggleExpanded: () => void;
   commentCount: (path: string) => number;
 }): JSX.Element {
   return (
     <div
       style={{
-        borderBottom: '1px solid var(--line-2)',
-        background: 'var(--bg-1)',
+        width: FILE_PANE_WIDTH,
         flexShrink: 0,
+        borderRight: '1px solid var(--line-2)',
+        background: 'var(--bg-1)',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
       }}
     >
       <div
@@ -323,35 +331,19 @@ function FileList({
           alignItems: 'center',
           gap: 8,
           background: 'var(--bg-2)',
+          borderBottom: '1px solid var(--line-2)',
+          flexShrink: 0,
         }}
       >
-        <button
-          onClick={onToggleExpanded}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--fg-2)',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 11,
-            fontFamily: 'var(--font-sans)',
-            padding: 0,
-          }}
-        >
-          <ChevronDown
-            size={11}
-            style={{
-              transform: expanded ? 'none' : 'rotate(-90deg)',
-              transition: 'transform 0.12s',
-            }}
-          />
-          <span style={{ fontWeight: 600, color: 'var(--fg-1)' }}>Files</span>
-          <span className="mono" style={{ color: 'var(--fg-3)' }}>
-            {files.length}
-          </span>
-        </button>
+        <span style={{ fontWeight: 600, color: 'var(--fg-1)', fontSize: 11 }}>
+          Files
+        </span>
+        <span className="mono" style={{ color: 'var(--fg-3)', fontSize: 11 }}>
+          {visibleFiles.length}
+          {hideGenerated && hiddenCount > 0 && (
+            <span style={{ color: 'var(--fg-4)' }}>/{files.length}</span>
+          )}
+        </span>
         <span style={{ flex: 1 }} />
         <label
           style={{
@@ -362,6 +354,11 @@ function FileList({
             color: 'var(--fg-2)',
             cursor: 'pointer',
           }}
+          title={
+            hiddenCount > 0
+              ? `${hiddenCount} generated file${hiddenCount === 1 ? '' : 's'} hidden`
+              : 'Hide generated files (lockfiles, dist/, snapshots, etc.)'
+          }
         >
           <input
             type="checkbox"
@@ -376,44 +373,43 @@ function FileList({
             }}
           />
           Hide generated
-          {hiddenCount > 0 && (
-            <span className="mono" style={{ color: 'var(--fg-3)' }}>
-              · {hiddenCount}
-            </span>
-          )}
         </label>
       </div>
-      {expanded && (
-        <div style={{ maxHeight: 240, overflow: 'auto' }}>
-          {visibleFiles.map((f) => (
-            <FileRow
-              key={f.path}
-              file={f}
-              active={f.path === activePath}
-              viewed={viewedSet.has(f.path)}
-              commentCount={commentCount(f.path)}
-              onClick={() => onSelect(f.path)}
-              onToggleViewed={(e) => {
-                e.stopPropagation();
-                onToggleViewed(f.path);
-              }}
-            />
-          ))}
-          {visibleFiles.length === 0 && (
-            <div
-              style={{
-                padding: 14,
-                textAlign: 'center',
-                color: 'var(--fg-3)',
-                fontSize: 11,
-              }}
-            >
-              All {files.length} file{files.length === 1 ? '' : 's'} hidden by
-              the generated filter.
-            </div>
-          )}
-        </div>
-      )}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          minHeight: 0,
+        }}
+      >
+        {visibleFiles.map((f) => (
+          <FileRow
+            key={f.path}
+            file={f}
+            active={f.path === activePath}
+            viewed={viewedSet.has(f.path)}
+            commentCount={commentCount(f.path)}
+            onClick={() => onSelect(f.path)}
+            onToggleViewed={(e) => {
+              e.stopPropagation();
+              onToggleViewed(f.path);
+            }}
+          />
+        ))}
+        {visibleFiles.length === 0 && (
+          <div
+            style={{
+              padding: 14,
+              textAlign: 'center',
+              color: 'var(--fg-3)',
+              fontSize: 11,
+            }}
+          >
+            All {files.length} file{files.length === 1 ? '' : 's'} hidden by
+            the generated filter.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
