@@ -10,8 +10,10 @@ import {
   EscalateGlyph,
   Kbd,
   LabelPill,
+  StaleChip,
   Tooltip,
 } from './primitives';
+import { isStale } from '../lib/bucketing';
 
 interface PRRowProps {
   pr: DashboardPR;
@@ -172,6 +174,7 @@ export function PRRow({
             {pr.repoNameWithOwner}
           </span>
           {pr.isDraft && <DraftChip />}
+          {isStale(pr) && <StaleChip />}
           {labels.map((l, i) => (
             <LabelPill key={`${l.name}-${i}`} label={l} />
           ))}

@@ -183,7 +183,6 @@ export const EMPTY_TEXT: Record<string, string> = {
   ready: 'Nothing ready right now. Ship something.',
   blocked: 'No blockers. Clear runway.',
   inreview: 'Nothing in review.',
-  stale: 'Nothing aging. You keep a tidy queue.',
   needsreview: '',
   team: '',
   merged: 'Nothing merged in the last 7 days.',

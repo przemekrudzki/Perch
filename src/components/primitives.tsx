@@ -354,6 +354,52 @@ export function DraftChip() {
   );
 }
 
+/**
+ * Stale chip rendered next to the row title when no commits and no
+ * comments have landed in the last 48h. Predicate lives in
+ * `lib/bucketing.ts` (`isStale`); this is the visual.
+ */
+export function StaleChip() {
+  return (
+    <span
+      title="No commits or comments in the last 48 hours"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        height: 18,
+        padding: '0 6px',
+        borderRadius: 4,
+        border: '1px solid var(--line-2)',
+        background: 'var(--bg-2)',
+        color: 'var(--fg-2)',
+        fontSize: 10.5,
+        fontWeight: 500,
+        fontFamily: 'var(--font-sans)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.04em',
+      }}
+    >
+      <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+        <circle
+          cx="4.5"
+          cy="4.5"
+          r="3.5"
+          stroke="currentColor"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M4.5 2.5V4.5L5.7 5.4"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+      </svg>
+      Stale
+    </span>
+  );
+}
+
 export function EscalateGlyph() {
   return (
     <span

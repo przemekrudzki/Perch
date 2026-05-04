@@ -1,7 +1,7 @@
 import type { Bucket } from '../types/dashboard';
 import { TONE_STYLE } from './primitives';
 import type { LabelTone } from '../types/dashboard';
-import { isReadyToMerge } from '../lib/bucketing';
+import { isReadyToMerge, isStale } from '../lib/bucketing';
 
 interface Props {
   buckets: Bucket[];
@@ -20,6 +20,23 @@ export function HeadlineBand({ buckets }: Props) {
     (n, b) => n + b.items.filter(isReadyToMerge).length,
     0
   );
+
+  // Stale used to be its own bucket; now it's a chip on each row.
+  // The headline stat still rolls up the count so the user has a
+  // single-glance "how many are drifting" number. Dedupe by id —
+  // future-proof in case any consumer reintroduces a non-mutually-
+  // exclusive bucket.
+  const seenStale = new Set<string>();
+  let stale = 0;
+  for (const b of buckets) {
+    for (const pr of b.items) {
+      if (seenStale.has(pr.id)) continue;
+      if (isStale(pr)) {
+        seenStale.add(pr.id);
+        stale += 1;
+      }
+    }
+  }
 
   return (
     <div
@@ -67,7 +84,7 @@ export function HeadlineBand({ buckets }: Props) {
       <StatBlock label="Ready to merge" value={readyToMerge} tone="ok" />
       <StatBlock label="Blocked" value={find('blocked')} tone="err" />
       <StatBlock label="In review" value={find('inreview')} tone="violet" />
-      <StatBlock label="Stale" value={find('stale')} tone="neutral" />
+      <StatBlock label="Stale" value={stale} tone="neutral" />
       {find('team') > 0 && (
         <StatBlock label="Team" value={find('team')} tone="info" />
       )}

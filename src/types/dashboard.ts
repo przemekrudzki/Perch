@@ -3,7 +3,6 @@ export type BucketId =
   | 'ready'
   | 'blocked'
   | 'inreview'
-  | 'stale'
   | 'needsreview'
   | 'team'
   | 'merged'

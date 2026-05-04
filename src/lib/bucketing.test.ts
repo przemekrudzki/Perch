@@ -383,8 +383,8 @@ describe('isStale', () => {
   });
 });
 
-describe('bucketize stale lens', () => {
-  it('places a stale teammate PR in BOTH the team bucket and the stale lens', () => {
+describe('bucketize stale handling', () => {
+  it('a stale teammate PR stays in team only — Stale is a chip, not a section', () => {
     const drifting = makeQuietPR({
       id: 'DRIFT',
       viewerIsAuthor: false,
@@ -395,21 +395,11 @@ describe('bucketize stale lens', () => {
     });
     const buckets = bucketize([drifting]);
     const team = buckets.find((b) => b.id === 'team')!;
-    const stale = buckets.find((b) => b.id === 'stale')!;
     expect(team.items.map((p) => p.id)).toEqual(['DRIFT']);
-    expect(stale.items.map((p) => p.id)).toEqual(['DRIFT']);
-  });
-
-  it('does not duplicate stale PRs into the merged bucket', () => {
-    // Defensive: even an old-looking merged PR should never be in stale.
-    const m = makeQuietPR({
-      id: 'OLD_MERGE',
-      isMerged: true,
-      mergedAt: new Date(Date.now() - 60 * HOUR_MS).toISOString(),
-    });
-    const buckets = bucketize([m]);
-    expect(buckets.find((b) => b.id === 'stale')!.items).toHaveLength(0);
-    expect(buckets.find((b) => b.id === 'merged')!.items).toHaveLength(1);
+    // Stale is not a bucket anymore — the predicate still flags it
+    // and the row chip + headline stat consume that.
+    expect(isStale(drifting)).toBe(true);
+    expect(buckets.find((b) => b.id === ('stale' as never))).toBeUndefined();
   });
 });
 
@@ -442,7 +432,6 @@ describe('bucketize', () => {
       'needsreview',
       'team',
       'other',
-      'stale',
       'merged',
     ]);
     expect(buckets[0]!.items.map((p) => p.id)).toEqual(['A']);

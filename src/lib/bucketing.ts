@@ -115,10 +115,9 @@ export interface BucketPlan {
   color: string;
 }
 
-// Stale sits at the bottom (just above Recently merged) so the user
-// reads action-shaped buckets first, then sees Stale as a reflective
-// "by the way, these aren't moving" callout. PRs may also appear in
-// their primary bucket above.
+// Stale used to be a section here; it's now a per-row chip rendered
+// in PRRow via `isStale(pr)`. The predicate is still exported so
+// callers (HeadlineBand stat, the chip itself) share one definition.
 export const BUCKET_PLAN: BucketPlan[] = [
   { id: 'waiting', title: 'Waiting on me', color: 'var(--bucket-primary)' },
   { id: 'ready', title: 'Ready to merge', color: 'var(--bucket-merge)' },
@@ -127,7 +126,6 @@ export const BUCKET_PLAN: BucketPlan[] = [
   { id: 'needsreview', title: 'Needs reviewers', color: 'var(--warn)' },
   { id: 'team', title: 'Team', color: 'var(--info)' },
   { id: 'other', title: 'Other', color: 'var(--fg-3)' },
-  { id: 'stale', title: 'Stale', color: 'var(--bucket-stale)' },
   { id: 'merged', title: 'Recently merged', color: 'var(--violet)' },
 ];
 
@@ -139,8 +137,7 @@ const BUCKET_ORDER: Record<BucketId, number> = {
   needsreview: 4,
   team: 5,
   other: 6,
-  stale: 7,
-  merged: 8,
+  merged: 7,
 };
 
 function sortPRs(a: DashboardPR, b: DashboardPR): number {
@@ -157,9 +154,10 @@ function sortPRs(a: DashboardPR, b: DashboardPR): number {
 
 /**
  * Bucket a list of PRs, returning an ordered array of buckets (empty
- * ones kept). Primary buckets are mutually exclusive (first-match via
- * `bucketOf`); Stale is computed independently by `isStale` and may
- * overlap with any primary bucket.
+ * ones kept). Buckets are mutually exclusive — `bucketOf` is
+ * first-match. Drift signal (`isStale`) is rendered as a chip on the
+ * row inside whichever bucket the PR actually belongs to, not as a
+ * separate section.
  */
 export function bucketize(prs: DashboardPR[]): Bucket[] {
   const groups = new Map<BucketId, DashboardPR[]>();
@@ -168,13 +166,6 @@ export function bucketize(prs: DashboardPR[]): Bucket[] {
   for (const pr of prs) {
     const id = bucketOf(pr);
     groups.get(id)!.push(pr);
-    // Stale is additive: a PR can appear here AND in its primary bucket.
-    // Skip merged (they short-circuit isStale anyway) and avoid stuffing
-    // a PR into Stale twice if `bucketOf` already returned 'stale' (it
-    // doesn't, currently — but defensive against future changes).
-    if (id !== 'stale' && id !== 'merged' && isStale(pr)) {
-      groups.get('stale')!.push(pr);
-    }
   }
 
   const out: Bucket[] = [];
@@ -196,8 +187,9 @@ export function bucketize(prs: DashboardPR[]): Bucket[] {
 /**
  * Flatten buckets into a single ordered, deduplicated PR list for
  * keyboard nav and modal prev/next. Walks buckets in display order,
- * skips collapsed ones, and dedupes by PR id so a PR that appears in
- * both its primary bucket and the Stale lens only shows up once.
+ * skips collapsed ones, and dedupes by PR id (defensive — buckets
+ * are mutually exclusive today, but the dedupe keeps callers honest
+ * if that ever changes again).
  */
 export function flattenForNav(
   buckets: Bucket[],
@@ -222,7 +214,6 @@ function bucketMeta(id: BucketId, items: DashboardPR[]): string | undefined {
     return over24 > 0 ? `${over24} over 24h` : undefined;
   }
   if (id === 'ready' && items.length > 0) return 'Safe to merge';
-  if (id === 'stale' && items.length > 0) return 'No activity 48h+';
   if (id === 'needsreview' && items.length > 0) return 'Light on reviewers';
   if (id === 'team' && items.length > 0) return 'From tracked orgs';
   if (id === 'merged' && items.length > 0) return 'Last 7 days';
