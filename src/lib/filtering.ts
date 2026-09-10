@@ -26,6 +26,7 @@ export function filterPRs(
     if (!normalizedQuery) return true;
 
     return (
+      String(pr.number) === normalizedQuery.replace(/^#/, '') ||
       pr.title.toLowerCase().includes(normalizedQuery) ||
       pr.repoNameWithOwner.toLowerCase().includes(normalizedQuery) ||
       pr.author.login.toLowerCase().includes(normalizedQuery) ||

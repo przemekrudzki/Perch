@@ -59,6 +59,27 @@ describe('filterPRs', () => {
   });
   const prs = [alice, aliceMerged, bob];
 
+  it.each(['817', '#817', ' 817 ', ' #817 '])(
+    'matches the exact PR number with query %s',
+    (query) => {
+      const target = makePR('target', 'alice', { number: 817 });
+      const other = makePR('other', 'alice', { number: 1817 });
+
+      expect(
+        filterPRs([target, other], { query, authorLogin: null })
+      ).toEqual([target]);
+    }
+  );
+
+  it('combines PR-number matching with the author filter', () => {
+    const target = makePR('target', 'alice', { number: 817 });
+    const otherAuthor = makePR('other', 'bob', { number: 817 });
+
+    expect(
+      filterPRs([target, otherAuthor], { query: '817', authorLogin: 'alice' })
+    ).toEqual([target]);
+  });
+
   it('matches an author exactly and case-insensitively', () => {
     expect(
       filterPRs(prs, { query: '', authorLogin: 'ALICE' }).map((pr) => pr.id)
