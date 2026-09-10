@@ -34,11 +34,14 @@ export function useSubmitReview(): UseMutationResult<
       if (!token) throw new Error('Missing token');
       return submitReview(token, pullRequestId, event, body);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, { pullRequestId }) => {
       // Prefix match: usePRs keys its query ['dashboard', token, scope,
       // orgs], so ['dashboard'] invalidates every variant. Awaited so the
       // mutation stays pending until the refreshed list is in flight.
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['pr-conversation', token, pullRequestId] }),
+      ]);
     },
   });
 }

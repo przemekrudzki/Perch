@@ -135,18 +135,27 @@ export interface GqlPullRequest {
   labels: { nodes: GqlLabel[] };
 }
 
+export type GqlConversation = Pick<GqlPullRequest, 'id' | 'createdAt' | 'body' | 'author' | 'reviews' | 'comments'>;
+
+export type GqlPRSummary = Omit<GqlPullRequest, 'reviews' | 'comments' | 'assignees'> & {
+  reviews: { nodes: (Omit<GqlReview, 'body' | 'comments'> & {
+    comments: { nodes: Pick<GqlReviewComment, 'createdAt'>[] };
+  })[] };
+  comments: { nodes: Pick<GqlIssueComment, 'createdAt' | 'author'>[] };
+};
+
 export interface GqlDashboardResponse {
   viewer: {
     login: string;
     avatarUrl: string;
-    pullRequests: { nodes: GqlPullRequest[] };
+    pullRequests: { nodes: GqlPRSummary[] };
   };
-  reviewRequested: { nodes: GqlPullRequest[] };
+  reviewRequested: { nodes: GqlPRSummary[] };
   /** Present only when the @include(if: $includeTeam) branch is selected. */
-  teamPrs?: { nodes: GqlPullRequest[] };
-  mergedAuthored: { nodes: GqlPullRequest[] };
-  mergedReviewed: { nodes: GqlPullRequest[] };
+  teamPrs?: { nodes: GqlPRSummary[] };
+  mergedAuthored?: { nodes: GqlPRSummary[] };
+  mergedReviewed?: { nodes: GqlPRSummary[] };
   /** Present only when the @include(if: $includeTeam) branch is selected. */
-  mergedTeam?: { nodes: GqlPullRequest[] };
+  mergedTeam?: { nodes: GqlPRSummary[] };
   rateLimit: { remaining: number; resetAt: string };
 }

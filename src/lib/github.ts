@@ -1,5 +1,5 @@
 import { GraphQLClient } from 'graphql-request';
-import type { GqlDashboardResponse } from '../types/github';
+import type { GqlDashboardResponse, GqlConversation } from '../types/github';
 import type { Scope } from './storage';
 import type { ReviewEvent } from './reviewActions';
 
@@ -7,55 +7,7 @@ export type { ReviewEvent } from './reviewActions';
 
 export const GITHUB_ENDPOINT = 'https://api.github.com/graphql';
 
-export const DASHBOARD_QUERY = /* GraphQL */ `
-  query PRDashboard(
-    $searchQuery: String!
-    $teamSearchQuery: String!
-    $includeTeam: Boolean!
-    $mergedAuthoredQuery: String!
-    $mergedReviewedQuery: String!
-    $mergedTeamQuery: String!
-  ) {
-    viewer {
-      login
-      avatarUrl
-      pullRequests(states: OPEN, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) {
-        nodes { ...PRFields }
-      }
-    }
-    reviewRequested: search(query: $searchQuery, type: ISSUE, first: 50) {
-      nodes {
-        ... on PullRequest { ...PRFields }
-      }
-    }
-    teamPrs: search(query: $teamSearchQuery, type: ISSUE, first: 50)
-      @include(if: $includeTeam) {
-      nodes {
-        ... on PullRequest { ...PRFields }
-      }
-    }
-    mergedAuthored: search(query: $mergedAuthoredQuery, type: ISSUE, first: 30) {
-      nodes {
-        ... on PullRequest { ...PRFields }
-      }
-    }
-    mergedReviewed: search(query: $mergedReviewedQuery, type: ISSUE, first: 30) {
-      nodes {
-        ... on PullRequest { ...PRFields }
-      }
-    }
-    mergedTeam: search(query: $mergedTeamQuery, type: ISSUE, first: 30)
-      @include(if: $includeTeam) {
-      nodes {
-        ... on PullRequest { ...PRFields }
-      }
-    }
-    rateLimit {
-      remaining
-      resetAt
-    }
-  }
-
+const PR_SUMMARY_FIELDS = /* GraphQL */ `
   fragment PRFields on PullRequest {
     id
     number
@@ -86,7 +38,6 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
       login
       ... on User { avatarUrl }
     }
-    assignees(first: 5) { nodes { login avatarUrl } }
     reviewRequests(first: 10) {
       nodes {
         requestedReviewer {
@@ -107,36 +58,13 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
     reviews(last: 20) {
       nodes {
         id
-        author {
-          login
-          ... on User { avatarUrl }
-        }
+        author { login ... on User { avatarUrl } }
         state
         submittedAt
-        body
-        comments(first: 10) {
-          nodes {
-            id
-            body
-            path
-            line
-            originalLine
-            createdAt
-          }
-        }
+        comments(last: 1) { nodes { createdAt } }
       }
     }
-    comments(last: 20) {
-      nodes {
-        id
-        author {
-          login
-          ... on User { avatarUrl }
-        }
-        body
-        createdAt
-      }
-    }
+    comments(last: 20) { nodes { createdAt author { login } } }
     commits(last: 1) {
       totalCount
       nodes {
@@ -154,6 +82,39 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
       nodes { name color }
     }
   }
+`;
+
+export const DASHBOARD_QUERY = /* GraphQL */ `
+  query PRDashboard(
+    $searchQuery: String!
+    $teamSearchQuery: String!
+    $includeTeam: Boolean!
+  ) {
+    viewer {
+      login
+      avatarUrl
+      pullRequests(states: OPEN, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) {
+        nodes { ...PRFields }
+      }
+    }
+    reviewRequested: search(query: $searchQuery, type: ISSUE, first: 50) {
+      nodes {
+        ... on PullRequest { ...PRFields }
+      }
+    }
+    teamPrs: search(query: $teamSearchQuery, type: ISSUE, first: 50)
+      @include(if: $includeTeam) {
+      nodes {
+        ... on PullRequest { ...PRFields }
+      }
+    }
+    rateLimit {
+      remaining
+      resetAt
+    }
+  }
+
+  ${PR_SUMMARY_FIELDS}
 `;
 
 export const SEARCH_QUERY = 'is:open is:pr review-requested:@me archived:false';
@@ -366,7 +327,6 @@ export async function fetchDashboard(
 ): Promise<GqlDashboardResponse> {
   const client = createClient(token);
   const teamSearchQuery = buildTeamSearchQuery(opts.orgs);
-  const mergedTeamQuery = buildMergedTeamQuery(opts.orgs);
   const includeTeam = opts.scope === 'all' && teamSearchQuery.length > 0;
   return client.request<GqlDashboardResponse>(DASHBOARD_QUERY, {
     searchQuery: SEARCH_QUERY,
@@ -374,8 +334,96 @@ export async function fetchDashboard(
     // server-side but the variable is still validated as non-null String.
     teamSearchQuery: teamSearchQuery || 'is:open is:pr',
     includeTeam,
+  });
+}
+
+export const CONVERSATION_QUERY = /* GraphQL */ `
+  query PRConversation($id: ID!) {
+    node(id: $id) {
+      ... on PullRequest {
+        id
+        createdAt
+        body
+        author { login ... on User { avatarUrl } }
+        reviews(last: 20) {
+          nodes {
+            id
+            author {
+              login
+              ... on User { avatarUrl }
+            }
+            state
+            submittedAt
+            body
+            comments(first: 10) {
+              nodes {
+                id
+                body
+                path
+                line
+                originalLine
+                createdAt
+              }
+            }
+          }
+        }
+        comments(last: 20) {
+          nodes {
+            id
+            author {
+              login
+              ... on User { avatarUrl }
+            }
+            body
+            createdAt
+          }
+        }
+      }
+    }
+  }
+`;
+
+export async function fetchConversation(token: string, id: string, signal?: AbortSignal): Promise<GqlConversation> {
+  const result = await createClient(token).request<{ node: GqlConversation | null }>({
+    document: CONVERSATION_QUERY, variables: { id }, signal,
+  });
+  if (!result.node) throw new Error('This pull request is no longer accessible.');
+  return result.node;
+}
+
+export const MERGED_QUERY = /* GraphQL */ `
+  query MergedPRs($mergedAuthoredQuery: String!, $mergedReviewedQuery: String!, $mergedTeamQuery: String!, $includeTeam: Boolean!) {
+    viewer { login avatarUrl }
+    mergedAuthored: search(query: $mergedAuthoredQuery, type: ISSUE, first: 30) {
+      nodes {
+        ... on PullRequest { ...PRFields }
+      }
+    }
+    mergedReviewed: search(query: $mergedReviewedQuery, type: ISSUE, first: 30) {
+      nodes {
+        ... on PullRequest { ...PRFields }
+      }
+    }
+    mergedTeam: search(query: $mergedTeamQuery, type: ISSUE, first: 30)
+      @include(if: $includeTeam) {
+      nodes {
+        ... on PullRequest { ...PRFields }
+      }
+    }
+    rateLimit { remaining resetAt }
+  }
+  ${PR_SUMMARY_FIELDS}
+`;
+
+export async function fetchMerged(token: string, opts: FetchOptions): Promise<GqlDashboardResponse> {
+  const teamQuery = buildMergedTeamQuery(opts.orgs);
+  const result = await createClient(token).request<Omit<GqlDashboardResponse, 'reviewRequested' | 'viewer'> & {
+    viewer: { login: string; avatarUrl: string };
+  }>(MERGED_QUERY, {
     mergedAuthoredQuery: buildMergedAuthoredQuery(),
     mergedReviewedQuery: buildMergedReviewedQuery(),
-    mergedTeamQuery: mergedTeamQuery || 'is:pr is:merged',
+    mergedTeamQuery: teamQuery || 'is:pr is:merged',
+    includeTeam: opts.scope === 'all' && Boolean(teamQuery),
   });
+  return { ...result, viewer: { ...result.viewer, pullRequests: { nodes: [] } }, reviewRequested: { nodes: [] } };
 }

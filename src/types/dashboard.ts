@@ -121,7 +121,9 @@ export interface DashboardPR {
    * which case the Stale lens falls back to `createdAt`).
    */
   lastCommentAt: string | null;
-  /** Opened + reviews + comments, sorted by time ascending. */
+  /** Latest conversation activity by someone other than the viewer. */
+  lastForeignCommentAt?: string | null;
+  /** Drawer conversation, loaded separately; inbox summaries leave this empty. */
   timeline: TimelineEvent[];
 }
 

@@ -1,3 +1,5 @@
+import { usePRConversation } from '../hooks/usePRConversation';
+import { ErrorBanner } from './ErrorBanner';
 import { useEffect, useRef, useState } from 'react';
 import {
   X,
@@ -73,7 +75,7 @@ const MODAL_WIDTH_MAX = '96vw';
 const MODAL_HEIGHT_MAX = '96vh';
 
 export function PRDetail({
-  pr,
+  pr: summary,
   onClose,
   navIndex,
   navTotal,
@@ -81,6 +83,9 @@ export function PRDetail({
   nextId,
   onNavigate,
 }: Props) {
+  const token = useUIStore((s) => s.token);
+  const conversation = usePRConversation(summary.id, summary.updatedAt);
+  const pr = { ...summary, timeline: conversation.data ?? [] };
   const [activeTab, setActiveTab] = useState<DrawerTab>('timeline');
   // Deliberately unpersisted: chrome you popped open for one PR
   // shouldn't still be open on the next one.
@@ -332,6 +337,8 @@ export function PRDetail({
         fileCount={pr.changedFiles}
       />
 
+      {conversation.isLoading && <div role="status" style={{ padding: 12, color: 'var(--fg-2)' }}>Loading conversation…</div>}
+      {conversation.error && <ErrorBanner tone="err" title="Couldn't load conversation" body={(conversation.error.message.split(token || '\0').join(token ? redactToken(token) : ''))} actionLabel="Retry" onAction={() => void conversation.refetch()} />}
       {activeTab === 'timeline' && (
         <div
           id="pr-panel-timeline"
