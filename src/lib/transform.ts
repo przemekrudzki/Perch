@@ -1,7 +1,8 @@
 import type {
   GqlDashboardResponse,
   GqlLabel,
-  GqlPullRequest,
+  GqlPRSummary,
+  GqlConversation,
   GqlUser,
   ReviewState,
 } from '../types/github';
@@ -150,7 +151,7 @@ function isVerdict(state: ReviewState): boolean {
  * A reviewer's standing state is their latest *opinionated* review;
  * COMMENTED only surfaces when they never gave a verdict.
  */
-function latestReviewByLogin(pr: GqlPullRequest): Map<string, LatestReview> {
+function latestReviewByLogin(pr: GqlPRSummary): Map<string, LatestReview> {
   const map = new Map<string, LatestReview>();
   const apply = (r: {
     author: GqlUser | null;
@@ -190,7 +191,7 @@ function latestReviewByLogin(pr: GqlPullRequest): Map<string, LatestReview> {
  * `reviewRequestedSet` is the set of PR ids where the viewer is currently requested.
  */
 export function transformPR(
-  pr: GqlPullRequest,
+  pr: GqlPRSummary,
   viewerLogin: string,
   reviewRequestedSet: Set<string>
 ): DashboardPR {
@@ -307,6 +308,17 @@ export function transformPR(
     for (const ic of r.comments.nodes) recordActivity(ic.createdAt);
   }
 
+  let lastForeignCommentAt: string | null = null;
+  const recordForeign = (at: string | null, login: string | undefined): void => {
+    if (!at || !login || login === viewerLogin) return;
+    if (!lastForeignCommentAt || Date.parse(at) > Date.parse(lastForeignCommentAt)) lastForeignCommentAt = at;
+  };
+  for (const c of pr.comments.nodes) recordForeign(c.createdAt, c.author?.login);
+  for (const r of pr.reviews.nodes) {
+    if (r.state === 'COMMENTED') recordForeign(r.submittedAt, r.author?.login);
+    for (const c of r.comments.nodes) recordForeign(c.createdAt, r.author?.login);
+  }
+
   return {
     id: pr.id,
     number: pr.number,
@@ -344,10 +356,11 @@ export function transformPR(
     commentCount: pr.totalCommentsCount ?? 0,
     lastCommitAt,
     lastCommentAt,
+    lastForeignCommentAt,
     headRefName: pr.headRefName,
     headSha: pr.headRefOid,
     baseRefName: pr.baseRefName,
-    timeline: buildTimeline(pr, author),
+    timeline: [],
   };
 }
 
@@ -355,9 +368,9 @@ export function transformPR(
  * Assemble the drawer timeline: opened + reviews (approved / changes /
  * commented-with-body) + general issue comments, sorted ascending.
  */
-function buildTimeline(
-  pr: GqlPullRequest,
-  author: DashboardUser
+export function buildTimeline(
+  pr: GqlConversation,
+  author: DashboardUser = toUser(pr.author)
 ): TimelineEvent[] {
   const events: TimelineEvent[] = [
     {
@@ -469,8 +482,8 @@ export function transformDashboard(res: GqlDashboardResponse): {
     res.reviewRequested.nodes.filter((n) => n && n.id).map((n) => n.id)
   );
 
-  const byId = new Map<string, GqlPullRequest>();
-  const addNode = (pr: GqlPullRequest | null | undefined): void => {
+  const byId = new Map<string, GqlPRSummary>();
+  const addNode = (pr: GqlPRSummary | null | undefined): void => {
     if (!pr || !pr.id) return;
     // Drop PRs from archived repos. `search` already filters these via
     // `archived:false`, but the direct `viewer.pullRequests` field does not.
@@ -482,8 +495,8 @@ export function transformDashboard(res: GqlDashboardResponse): {
   if (res.teamPrs) {
     for (const pr of res.teamPrs.nodes) addNode(pr);
   }
-  for (const pr of res.mergedAuthored.nodes) addNode(pr);
-  for (const pr of res.mergedReviewed.nodes) addNode(pr);
+  for (const pr of res.mergedAuthored?.nodes ?? []) addNode(pr);
+  for (const pr of res.mergedReviewed?.nodes ?? []) addNode(pr);
   if (res.mergedTeam) {
     for (const pr of res.mergedTeam.nodes) addNode(pr);
   }

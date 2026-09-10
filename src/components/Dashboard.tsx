@@ -17,6 +17,7 @@ import { HelpOverlay } from './HelpOverlay';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import { ErrorBanner } from './ErrorBanner';
 import { bucketize, flattenForNav } from '../lib/bucketing';
+import { redactToken } from '../lib/storage';
 import { filterPRs } from '../lib/filtering';
 import type { DashboardPR, DashboardUser } from '../types/dashboard';
 
@@ -206,6 +207,8 @@ export function Dashboard() {
         />
 
         {query.data && <HeadlineBand buckets={buckets} />}
+        {query.mergedLoading && <div role="status" style={{ padding: 12, color: 'var(--fg-2)' }}>Loading recently merged PRs…</div>}
+        {query.mergedError && <ErrorBanner tone="warn" title="Couldn't refresh recently merged PRs" body={(query.mergedError.message.split(token || '\0').join(token ? redactToken(token) : ''))} actionLabel="Retry" onAction={() => void query.retryMerged()} />}
 
         {query.error && isAuthError && (
           <ErrorBanner
@@ -247,7 +250,7 @@ export function Dashboard() {
           {query.isLoading && <LoadingSkeleton />}
           {!query.isLoading && query.data && (
             <>
-              {totalOpen === 0 && !hasActiveFilter ? (
+              {filtered.length === 0 && !hasActiveFilter ? (
                 <AllCaughtUp />
               ) : filtered.length === 0 && hasActiveFilter ? (
                 <NoFilterMatches

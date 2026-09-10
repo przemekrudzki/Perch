@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { transformDashboard } from './transform';
-import type { GqlDashboardResponse, GqlPullRequest } from '../types/github';
+import { transformDashboard, buildTimeline } from './transform';
+import type { GqlDashboardResponse, GqlPullRequest, GqlPRSummary } from '../types/github';
 
 function makeGqlPR(overrides: Partial<GqlPullRequest> = {}): GqlPullRequest {
   const now = new Date().toISOString();
@@ -60,6 +60,32 @@ function makeResponse(prs: GqlPullRequest[]): GqlDashboardResponse {
 }
 
 describe('transformDashboard', () => {
+  it('transforms an open-only response without conversation bodies', () => {
+    const summary: GqlPRSummary = {
+      ...makeGqlPR({ body: 'See KRIT-123', totalCommentsCount: 42 }),
+      comments: { nodes: [
+        { createdAt: '2026-09-10T12:00:00Z', author: { login: 'teammate' } },
+        { createdAt: '2026-09-10T13:00:00Z', author: { login: 'me' } },
+      ] },
+      reviews: { nodes: [{
+        id: 'review', author: { login: 'reviewer' }, state: 'APPROVED',
+        submittedAt: '2026-09-10T10:00:00Z',
+        comments: { nodes: [{ createdAt: '2026-09-10T11:00:00Z' }] },
+      }] },
+    };
+    const response = makeResponse([]);
+    delete response.mergedAuthored;
+    delete response.mergedReviewed;
+    response.viewer.pullRequests.nodes = [summary];
+    const pr = transformDashboard(response).prs[0]!;
+    expect(pr.approvalCount).toBe(1);
+    expect(pr.commentCount).toBe(42);
+    expect(pr.lastCommentAt).toBe('2026-09-10T13:00:00Z');
+    expect(pr.lastForeignCommentAt).toBe('2026-09-10T12:00:00Z');
+    expect(pr.jiraTicketKey).toBe('KRIT-123');
+    expect(pr.timeline).toEqual([]);
+  });
+
   it('infers the Jira ticket from branch, title, then description', () => {
     const fromBranch = makeGqlPR({
       id: 'BRANCH',
@@ -164,8 +190,7 @@ describe('transformDashboard', () => {
         ],
       },
     });
-    const out = transformDashboard(makeResponse([pr]));
-    const tl = out.prs[0]!.timeline;
+    const tl = buildTimeline(pr);
     expect(tl.map((e) => e.kind)).toEqual([
       'opened',
       'review-changes',
@@ -293,7 +318,7 @@ describe('transformDashboard', () => {
     expect(out.reviewerCount).toBe(1); // bot doesn't count
     expect(out.reviewers.map((r) => r.login)).toEqual(['bob']);
     // Timeline should still surface what the bot said
-    const reviewKinds = out.timeline.map((e) => e.kind);
+    const reviewKinds = buildTimeline(pr).map((e) => e.kind);
     expect(reviewKinds).toContain('review-comment');
   });
 
@@ -475,14 +500,14 @@ describe('transformDashboard', () => {
     const pr = makeGqlPR({
       body: 'Resolves KRIT-487. Migrates the LTI launcher to v1.3.',
     });
-    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline;
+    const tl = buildTimeline(pr);
     expect(tl[0]!.kind).toBe('opened');
     expect(tl[0]!.body).toContain('KRIT-487');
   });
 
   it('omits the opened body when the description is empty', () => {
     const pr = makeGqlPR({ body: '   \n\n  ' });
-    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline;
+    const tl = buildTimeline(pr);
     expect(tl[0]!.kind).toBe('opened');
     expect(tl[0]!.body).toBeUndefined();
   });
@@ -566,7 +591,7 @@ describe('transformDashboard', () => {
         ],
       },
     });
-    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline;
+    const tl = buildTimeline(pr);
     const kinds = tl.map((e) => e.kind);
     // Two inline-comment events after "opened"; no review-level event
     // because the top-level body was empty.
@@ -612,7 +637,7 @@ describe('transformDashboard', () => {
         ],
       },
     });
-    const tl = transformDashboard(makeResponse([pr])).prs[0]!.timeline.filter(
+    const tl = buildTimeline(pr).filter(
       (e) => e.kind === 'inline-comment'
     );
     expect(tl).toHaveLength(2);

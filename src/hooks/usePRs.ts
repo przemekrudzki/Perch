@@ -1,5 +1,6 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { fetchDashboard } from '../lib/github';
+import { useCallback, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { fetchDashboard, fetchMerged } from '../lib/github';
 import { transformDashboard } from '../lib/transform';
 import { bucketize } from '../lib/bucketing';
 import type { Bucket, DashboardPR } from '../types/dashboard';
@@ -25,10 +26,10 @@ export function usePRs({
   scope,
   orgs,
   notificationsEnabled = false,
-}: Args): UseQueryResult<DashboardData, Error> {
+}: Args) {
   const effectiveScope: Scope = orgs.length === 0 ? 'inbox' : scope;
-  return useQuery<DashboardData, Error>({
-    queryKey: ['dashboard', token, effectiveScope, orgs.join(',')],
+  const open = useQuery<DashboardData, Error>({
+    queryKey: ['dashboard', token, effectiveScope, orgs.join(','), 'open'],
     enabled: Boolean(token),
     refetchInterval: 60_000,
     refetchIntervalInBackground: notificationsEnabled,
@@ -56,4 +57,39 @@ export function usePRs({
       return failureCount < 2;
     },
   });
+  const merged = useQuery({
+    queryKey: ['dashboard', token, effectiveScope, orgs.join(','), 'merged'],
+    enabled: Boolean(token),
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: notificationsEnabled,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      if (!token) throw new Error('Missing token');
+      return transformDashboard(await fetchMerged(token, { scope: effectiveScope, orgs }));
+    },
+    retry: false,
+  });
+  const data = useMemo(() => {
+    if (!open.data) return undefined;
+    // A merged result wins over an older open snapshot of the same PR.
+    const byId = new Map(open.data.prs.map((pr) => [pr.id, pr]));
+    for (const pr of merged.data?.prs ?? []) byId.set(pr.id, pr);
+    const prs = [...byId.values()];
+    return { ...open.data, prs, buckets: bucketize(prs) };
+  }, [open.data, merged.data]);
+  const refetchOpen = open.refetch;
+  const refetchMerged = merged.refetch;
+  const refetch = useCallback(
+    () => Promise.all([refetchOpen(), refetchMerged()]),
+    [refetchOpen, refetchMerged]
+  );
+  return {
+    ...open,
+    data,
+    refetch,
+    mergedError: merged.error,
+    mergedLoading: merged.isLoading,
+    retryMerged: merged.refetch,
+  };
+
 }

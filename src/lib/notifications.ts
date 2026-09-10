@@ -27,6 +27,10 @@ function latestForeignCommentMs(
   pr: DashboardPR,
   viewerLogin: string | null
 ): number {
+  // Inbox summaries carry activity metadata without downloading the timeline.
+  if (pr.lastForeignCommentAt !== undefined) {
+    return pr.lastForeignCommentAt ? Date.parse(pr.lastForeignCommentAt) : 0;
+  }
   let latest = 0;
   for (const event of pr.timeline) {
     if (!COMMENT_KINDS.has(event.kind)) continue;
