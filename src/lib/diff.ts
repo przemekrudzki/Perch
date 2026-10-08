@@ -185,3 +185,31 @@ export async function fetchPRDiff(
   const files = json.map(transformDiffFile);
   return { files, total: totalChangedFiles };
 }
+
+/** Pair consecutive deletions/additions within each change block.
+ * Context rows anchor both sides; unmatched changes leave an empty cell.
+ */
+export function splitDiffRows(rows: DiffRow[]): { old: DiffRow | null; new: DiffRow | null }[] {
+  const result: { old: DiffRow | null; new: DiffRow | null }[] = [];
+  let old: DiffRow[] = [];
+  let next: DiffRow[] = [];
+  const flush = () => {
+    for (let i = 0; i < Math.max(old.length, next.length); i++) {
+      result.push({ old: old[i] ?? null, new: next[i] ?? null });
+    }
+    old = [];
+    next = [];
+  };
+  for (const row of rows) {
+    if (row.kind === 'ctx') {
+      flush();
+      result.push({ old: row, new: row });
+    } else if (row.kind === 'del') {
+      old.push(row);
+    } else {
+      next.push(row);
+    }
+  }
+  flush();
+  return result;
+}

@@ -1,3 +1,4 @@
+import { splitDiffRows } from '../lib/diff';
 import {
   useEffect,
   useMemo,
@@ -1038,11 +1039,13 @@ function Hunk({
   fontSize: number;
   lineHeight: number;
 }): JSX.Element {
+  const view = useUIStore((s) => s.diffView);
+  const pairs = useMemo(() => view === 'split' ? splitDiffRows(hunk.rows) : [], [view, hunk.rows]);
   return (
     <div>
       <div
         style={{
-          padding: '4px 12px 4px 96px',
+          padding: view === 'split' ? '4px 12px' : '4px 12px 4px 96px',
           fontFamily: 'var(--font-mono)',
           // Trails the code by the same 0.5px the shipped 11.5/11 pair did.
           fontSize: fontSize - 0.5,
@@ -1058,7 +1061,29 @@ function Hunk({
       >
         {hunk.header}
       </div>
-      {hunk.rows.map((row, i) => {
+      {view === 'split' ? (
+        <div style={{ minWidth: 640 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', color: 'var(--fg-3)', background: 'var(--bg-1)', fontSize: 11 }}>
+            <span style={{ padding: '3px 12px' }}>Before</span>
+            <span style={{ padding: '3px 12px', borderLeft: '1px solid var(--line-2)' }}>After</span>
+          </div>
+          {pairs.map((pair, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)' }}>
+              {(['old', 'new'] as const).map((side) => {
+                const row = pair[side];
+                const line = side === 'old' ? row?.ln : row?.rn;
+                const events = line != null ? inlineComments.get(`${path}::${side}:${line}`) : undefined;
+                return (
+                  <div key={side} style={{ minWidth: 0, background: 'var(--bg-1)', borderLeft: side === 'new' ? '1px solid var(--line-2)' : undefined }}>
+                    <SplitLine row={row} side={side} fontSize={fontSize} lineHeight={lineHeight} />
+                    {events && events.length > 0 && <InlineThread events={events} compact />}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      ) : hunk.rows.map((row, i) => {
         // Comments are anchored per-side: a comment on a deletion
         // (old-side line 30) and a comment on the matching addition
         // (new-side line 30) are distinct threads even though they
@@ -1081,6 +1106,33 @@ function Hunk({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function SplitLine({
+  row, side, fontSize, lineHeight,
+}: {
+  row: DiffRow | null;
+  side: 'old' | 'new';
+  fontSize: number;
+  lineHeight: number;
+}): JSX.Element {
+  const tone = row?.kind === 'add' ? 'var(--ok)' : row?.kind === 'del' ? 'var(--err)' : null;
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '40px 16px minmax(0, 1fr)',
+      fontFamily: 'var(--font-mono)', fontSize, lineHeight: `${lineHeight}px`,
+      minHeight: lineHeight,
+      background: tone ? `color-mix(in srgb, ${tone} 10%, transparent)` : row ? 'transparent' : 'var(--bg-2)',
+    }}>
+      <span style={lineNumStyle('transparent')}>{(side === 'old' ? row?.ln : row?.rn) ?? ''}</span>
+      <span style={{ textAlign: 'center', color: tone ?? 'var(--fg-4)', userSelect: 'none' }}>
+        {row?.kind === 'add' ? '+' : row?.kind === 'del' ? '−' : ' '}
+      </span>
+      <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', padding: '0 8px', color: 'var(--fg-0)' }}>
+        {row?.text || ' '}
+      </span>
     </div>
   );
 }
@@ -1171,14 +1223,17 @@ function lineNumStyle(bg: string): CSSProperties {
 
 function InlineThread({
   events,
+  compact = false,
 }: {
   events: TimelineEvent[];
+  compact?: boolean;
 }): JSX.Element {
   return (
     <div
       data-inline-thread
       style={{
-        margin: '4px 12px 8px 96px',
+        margin: compact ? '4px 8px 8px' : '4px 12px 8px 96px',
+        overflowWrap: 'anywhere',
         border: '1px solid var(--line-2)',
         borderRadius: 6,
         background: 'var(--bg-2)',
