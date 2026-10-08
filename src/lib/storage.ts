@@ -1,3 +1,4 @@
+import type { DiffView } from '../types/diff';
 import type { CommitSortOrder } from '../types/commits';
 
 const TOKEN_KEY = 'perch.token';
@@ -103,6 +104,16 @@ export const storage = {
   },
   setDiffFontSize(size: number): void {
     localStorage.setItem(DIFF_FONT_SIZE_KEY, String(clampDiffFontSize(size)));
+  },
+  getDiffView(): DiffView {
+    try {
+      return localStorage.getItem('perch.diff.view') === 'split' ? 'split' : 'unified';
+    } catch {
+      return 'unified';
+    }
+  },
+  setDiffView(view: DiffView): void {
+    localStorage.setItem('perch.diff.view', view);
   },
   getDiffRailOpen(): boolean {
     // Defaults to open: an unset key must not read as "collapsed".

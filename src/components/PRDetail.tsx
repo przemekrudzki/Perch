@@ -110,6 +110,9 @@ export function PRDetail({
   const fontSize = useUIStore((s) => s.diffFontSize);
   const adjustFontSize = useUIStore((s) => s.adjustDiffFontSize);
 
+  const diffView = useUIStore((s) => s.diffView);
+  const setDiffView = useUIStore((s) => s.setDiffView);
+
   const isDiff = activeTab === 'diff';
   const isCommits = activeTab === 'commits';
   const isReading = isDiff || isCommits;
@@ -263,6 +266,23 @@ export function PRDetail({
         {/* Diff view controls — only meaningful while reading code. */}
         {isDiff && (
           <>
+            <div role="group" aria-label="Diff layout" style={{ display: 'flex', border: '1px solid var(--line-2)', borderRadius: 'var(--r-1)', overflow: 'hidden', flexShrink: 0 }}>
+              {(['unified', 'split'] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  aria-pressed={diffView === view}
+                  onClick={() => setDiffView(view)}
+                  style={{
+                    padding: '4px 8px', border: 0, cursor: 'pointer', fontSize: 11,
+                    background: diffView === view ? 'var(--bg-3)' : 'var(--bg-1)',
+                    color: diffView === view ? 'var(--fg-0)' : 'var(--fg-3)',
+                  }}
+                >
+                  {view === 'unified' ? 'Unified' : 'Split'}
+                </button>
+              ))}
+            </div>
             <FontStepper size={fontSize} onAdjust={adjustFontSize} />
             <IconToggle
               on={!railOpen}

@@ -53,3 +53,5 @@ export interface PRDiffResult {
    */
   total: number;
 }
+
+export type DiffView = 'unified' | 'split';

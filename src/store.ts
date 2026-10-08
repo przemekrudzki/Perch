@@ -1,3 +1,4 @@
+import type { DiffView } from './types/diff';
 import { create } from 'zustand';
 import { clampDiffFontSize, storage, type Scope, type Theme } from './lib/storage';
 import type { CommitSortOrder } from './types/commits';
@@ -22,6 +23,8 @@ interface UIState {
   diffFontSize: number;
   /** File rail visible in the Diff tab. Persisted. */
   diffRailOpen: boolean;
+  diffView: DiffView;
+  setDiffView: (view: DiffView) => void;
   /** Remembered order for the Commits tab. */
   commitSortOrder: CommitSortOrder;
   setToken: (token: string | null) => void;
@@ -58,6 +61,11 @@ export const useUIStore = create<UIState>((set) => ({
   diffMaximized: storage.getDiffMaximized(),
   diffFontSize: storage.getDiffFontSize(),
   diffRailOpen: storage.getDiffRailOpen(),
+  diffView: storage.getDiffView(),
+  setDiffView: (diffView) => {
+    storage.setDiffView(diffView);
+    set({ diffView });
+  },
   commitSortOrder: storage.getCommitSortOrder(),
   // Start with "Recently merged" folded since it's historical and not
   // the attention-first signal.

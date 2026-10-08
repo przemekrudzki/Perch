@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  splitDiffRows,
   isGeneratedPath,
   parsePatch,
   transformDiffFile,
@@ -178,5 +179,34 @@ describe('isGeneratedPath', () => {
     expect(isGeneratedPath('README.md')).toBe(false);
     expect(isGeneratedPath('package.json')).toBe(false);
     expect(isGeneratedPath('docs/locked-down-rooms.md')).toBe(false);
+  });
+});
+
+describe('splitDiffRows', () => {
+  it('aligns context and replacements without pairing across context boundaries', () => {
+    const [hunk] = parsePatch('@@ -1,5 +1,5 @@\n start\n-old one\n-old two\n+new one\n middle\n-last\n+last one\n+last two');
+    const pairs = splitDiffRows(hunk.rows);
+    expect(pairs.map((pair) => [pair.old?.text ?? null, pair.new?.text ?? null])).toEqual([
+      ['start', 'start'],
+      ['old one', 'new one'],
+      ['old two', null],
+      ['middle', 'middle'],
+      ['last', 'last one'],
+      [null, 'last two'],
+    ]);
+    expect(pairs[1].old?.ln).toBe(2);
+    expect(pairs[1].new?.rn).toBe(2);
+    expect(pairs[4].old?.ln).toBe(5);
+    expect(pairs[4].new?.rn).toBe(4);
+  });
+
+  it('handles added and deleted files, empty hunks, and preserves whitespace', () => {
+    expect(splitDiffRows([])).toEqual([]);
+    const [added] = parsePatch('@@ -0,0 +1,2 @@\n+  indented\n+');
+    expect(splitDiffRows(added.rows).map((pair) => [pair.old, pair.new?.text])).toEqual([
+      [null, '  indented'], [null, ''],
+    ]);
+    const [deleted] = parsePatch('@@ -1,1 +0,0 @@\n-gone');
+    expect(splitDiffRows(deleted.rows)).toEqual([{ old: deleted.rows[0], new: null }]);
   });
 });
