@@ -1,3 +1,4 @@
+import { PipelineChip } from './PipelineChecks';
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { formatDistanceToNowStrict } from 'date-fns';
 import type { DashboardPR, DashboardReviewer } from '../types/dashboard';
@@ -5,7 +6,6 @@ import {
   ApprovalChip,
   Avatar,
   AvatarStack,
-  CIStatusChip,
   DraftChip,
   EscalateGlyph,
   Kbd,
@@ -227,7 +227,7 @@ export function PRRow({
             total={Math.max(pr.reviewerCount, pr.approvalCount)}
           />
         </Tooltip>
-        <CIStatusChip state={pr.ciStatus} compact />
+        <PipelineChip pr={pr} />
         <AvatarStack users={pr.reviewers} max={3} size={18} />
         {pr.commentCount > 0 && (
           <Tooltip
