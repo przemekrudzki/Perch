@@ -33,7 +33,10 @@ export function useRerunPipeline(): UseMutationResult<
       return rerunPipeline(token, repoNameWithOwner, headSha);
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['pipeline'] }),
+      ]);
     },
   });
 }

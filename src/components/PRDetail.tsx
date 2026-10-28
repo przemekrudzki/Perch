@@ -30,6 +30,7 @@ import {
   LabelPill,
   TONE_STYLE,
 } from './primitives';
+import { PipelineChecks } from './PipelineChecks';
 import { DiffTab, prefersReducedMotion } from './DiffTab';
 import { CommitsTab } from './CommitsTab';
 import { useSubmitReview } from '../hooks/useSubmitReview';
@@ -58,8 +59,8 @@ interface Props {
   onNavigate: (id: string) => void;
 }
 
-type DrawerTab = 'timeline' | 'commits' | 'diff';
-const DRAWER_TABS: DrawerTab[] = ['timeline', 'commits', 'diff'];
+type DrawerTab = 'timeline' | 'commits' | 'diff' | 'checks';
+const DRAWER_TABS: DrawerTab[] = ['timeline', 'commits', 'diff', 'checks'];
 
 // Centered modal layout (experimenting). Sized generously for Diff
 // readability — since the modal floats over the bucket list with a
@@ -115,7 +116,7 @@ export function PRDetail({
 
   const isDiff = activeTab === 'diff';
   const isCommits = activeTab === 'commits';
-  const isReading = isDiff || isCommits;
+  const isReading = isDiff || isCommits || activeTab === 'checks';
   // Reading tabs collapse the composer behind "Review ▾"; Timeline
   // keeps it open, as it always has.
   const composerOpen = !isReading || reviewOpen;
@@ -432,6 +433,16 @@ export function PRDetail({
           })}
         </div>
 
+        </div>
+      )}
+      {activeTab === 'checks' && (
+        <div
+          id="pr-panel-checks"
+          role="tabpanel"
+          aria-labelledby="pr-tab-checks"
+          style={{ flex: 1, minHeight: 0, overflow: 'auto' }}
+        >
+          <PipelineChecks pr={pr} />
         </div>
       )}
       {activeTab === 'commits' && (
@@ -1400,6 +1411,13 @@ function TabStrip({
         count={fileCount}
         active={activeTab === 'diff'}
         onClick={() => onChange('diff')}
+      />
+      <TabButton
+        tab="checks"
+        label="Checks"
+        count={null}
+        active={activeTab === 'checks'}
+        onClick={() => onChange('checks')}
       />
     </div>
   );
