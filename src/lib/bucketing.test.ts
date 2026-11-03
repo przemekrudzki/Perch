@@ -104,6 +104,50 @@ describe('bucketOf', () => {
     expect(bucketOf(pr)).toBe('blocked');
   });
 
+  it.each([false, true])('blocks an authored conflicting PR (draft: %s)', (isDraft) => {
+    expect(bucketOf(makePR({
+      viewerIsAuthor: true,
+      mergeable: 'CONFLICTING',
+      approvalState: 'approved',
+      approvalCount: 2,
+      ciStatus: 'success',
+      isDraft,
+    }))).toBe('blocked');
+  });
+
+  it('keeps unknown mergeability in review when there are no other blockers', () => {
+    expect(bucketOf(makePR({
+      viewerIsAuthor: true,
+      mergeable: 'UNKNOWN',
+      approvalState: 'approved',
+      approvalCount: 2,
+      ciStatus: 'success',
+    }))).toBe('inreview');
+  });
+
+  it('keeps conflicting PRs waiting on a requested viewer review', () => {
+    expect(bucketOf(makePR({
+      viewerIsRequestedReviewer: true,
+      mergeable: 'CONFLICTING',
+    }))).toBe('waiting');
+  });
+
+  it('preserves teammate buckets when conflicts are present', () => {
+    expect(bucketOf(makePR({ mergeable: 'CONFLICTING' }))).toBe('needsreview');
+    expect(bucketOf(makePR({
+      mergeable: 'CONFLICTING',
+      viewerReviewState: 'approved',
+    }))).toBe('team');
+  });
+
+  it('keeps merged PRs out of blocked even with stale conflict data', () => {
+    expect(bucketOf(makePR({
+      viewerIsAuthor: true,
+      mergeable: 'CONFLICTING',
+      isMerged: true,
+    }))).toBe('merged');
+  });
+
   it('marks ready when approved, green CI, mergeable, and not draft', () => {
     const pr = makePR({
       viewerIsAuthor: true,

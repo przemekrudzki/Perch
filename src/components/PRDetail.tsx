@@ -704,7 +704,11 @@ function PRInfoBlock({
           label="Mergeable"
           tone={mergeableTone}
           value={mergeableValue(pr)}
-          sub=""
+          sub={
+            !pr.isMerged && pr.mergeable === 'CONFLICTING'
+              ? `Merge conflicts with ${pr.baseRefName}. Resolve conflicts before merging.`
+              : ''
+          }
         />
       </div>
 

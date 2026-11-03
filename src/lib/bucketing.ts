@@ -28,8 +28,12 @@ export function bucketOf(pr: DashboardPR): BucketId {
   }
 
   if (pr.viewerIsAuthor) {
-    // 2. Blocked: author sees CHANGES_REQUESTED or failing CI.
-    if (pr.approvalState === 'changes' || pr.ciStatus === 'failure') {
+    // 2. Blocked: changes requested, failing CI, or merge conflicts.
+    if (
+      pr.approvalState === 'changes' ||
+      pr.ciStatus === 'failure' ||
+      pr.mergeable === 'CONFLICTING'
+    ) {
       return 'blocked';
     }
 

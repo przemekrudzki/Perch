@@ -4,6 +4,7 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import type { DashboardPR, DashboardReviewer } from '../types/dashboard';
 import {
   ApprovalChip,
+  ConflictChip,
   Avatar,
   AvatarStack,
   DraftChip,
@@ -228,6 +229,9 @@ export function PRRow({
           />
         </Tooltip>
         <PipelineChip pr={pr} />
+        {!pr.isMerged && pr.mergeable === 'CONFLICTING' && (
+          <ConflictChip baseRefName={pr.baseRefName} />
+        )}
         <AvatarStack users={pr.reviewers} max={3} size={18} />
         {pr.commentCount > 0 && (
           <Tooltip
