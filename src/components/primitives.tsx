@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { TriangleAlert } from 'lucide-react';
 import type {
   ApprovalState,
   CIStatus,
@@ -403,6 +404,33 @@ export function StaleChip() {
       </svg>
       Stale
     </span>
+  );
+}
+
+export function ConflictChip({ baseRefName }: { baseRefName: string }) {
+  return (
+    <Tooltip content={`Merge conflicts with ${baseRefName}. Resolve conflicts before merging.`}>
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4,
+          height: 20,
+          padding: '0 6px',
+          borderRadius: 'var(--r-1)',
+          border: '1px solid var(--err-line)',
+          background: 'var(--err-bg)',
+          color: 'var(--err)',
+          fontSize: 11,
+          fontWeight: 500,
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
+        <TriangleAlert size={12} aria-hidden="true" />
+        Conflicts
+      </span>
+    </Tooltip>
   );
 }
 
