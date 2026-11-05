@@ -15,6 +15,7 @@ interface UIState {
   helpOpen: boolean;
   searchQuery: string;
   authorFilter: DashboardUser | null;
+  repoFilter: string | null;
   collapsedBuckets: Set<string>;
   notificationsEnabled: boolean;
   /** Modal escapes its 1100x900 cap. Persisted — big-diff readers stay big. */
@@ -37,6 +38,7 @@ interface UIState {
   setHelpOpen: (open: boolean) => void;
   setSearchQuery: (q: string) => void;
   setAuthorFilter: (author: DashboardUser | null) => void;
+  setRepoFilter: (repo: string | null) => void;
   toggleBucket: (id: string) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   toggleDiffMaximized: () => void;
@@ -57,6 +59,7 @@ export const useUIStore = create<UIState>((set) => ({
   helpOpen: false,
   searchQuery: '',
   authorFilter: null,
+  repoFilter: null,
   notificationsEnabled: storage.getNotifications(),
   diffMaximized: storage.getDiffMaximized(),
   diffFontSize: storage.getDiffFontSize(),
@@ -88,6 +91,7 @@ export const useUIStore = create<UIState>((set) => ({
     storage.setScope(scope);
     set((state) => ({
       scope,
+      repoFilter: state.scope === scope ? state.repoFilter : null,
       // Author filtering is a Team-view lens. Avoid carrying a hidden
       // teammate filter into the narrower Inbox dataset.
       authorFilter: state.scope === scope ? state.authorFilter : null,
@@ -126,6 +130,7 @@ export const useUIStore = create<UIState>((set) => ({
   setHelpOpen: (open) => set({ helpOpen: open }),
   setSearchQuery: (q) => set({ searchQuery: q }),
   setAuthorFilter: (authorFilter) => set({ authorFilter }),
+  setRepoFilter: (repoFilter) => set({ repoFilter }),
   toggleBucket: (id) =>
     set((s) => {
       const next = new Set(s.collapsedBuckets);

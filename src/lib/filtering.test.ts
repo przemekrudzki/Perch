@@ -107,6 +107,41 @@ describe('filterPRs', () => {
     ).toEqual([]);
   });
 
+  it('matches the full repository exactly, case-insensitively, including merged PRs', () => {
+    const otherOwner = makePR('other-owner', 'alice', { repoNameWithOwner: 'other/perch' });
+    const similarName = makePR('similar-name', 'alice', { repoNameWithOwner: 'acme/perch-tools' });
+    expect(filterPRs([...prs, otherOwner, similarName], {
+      query: '',
+      authorLogin: null,
+      repoNameWithOwner: 'ACME/Perch',
+    })).toEqual(prs);
+  });
+
+  it('intersects repository, author, and search filters', () => {
+    const otherRepo = makePR('other-repo', 'bob', {
+      title: bob.title,
+      repoNameWithOwner: 'acme/other',
+    });
+    expect(filterPRs([...prs, otherRepo], {
+      query: 'settings',
+      authorLogin: 'bob',
+      repoNameWithOwner: 'acme/perch',
+    })).toEqual([bob]);
+    expect(filterPRs(prs, {
+      query: '',
+      authorLogin: null,
+      repoNameWithOwner: 'missing/repo',
+    })).toEqual([]);
+  });
+
+  it('clears repository filtering without clearing the other filters', () => {
+    expect(filterPRs(prs, {
+      query: 'settings',
+      authorLogin: 'bob',
+      repoNameWithOwner: null,
+    })).toEqual([bob]);
+  });
+
   it('preserves all PRs when both filters are empty', () => {
     expect(filterPRs(prs, { query: '  ', authorLogin: null })).toEqual(prs);
   });

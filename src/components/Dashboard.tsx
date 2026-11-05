@@ -34,6 +34,8 @@ export function Dashboard() {
   const setSearchQuery = useUIStore((s) => s.setSearchQuery);
   const authorFilter = useUIStore((s) => s.authorFilter);
   const setAuthorFilter = useUIStore((s) => s.setAuthorFilter);
+  const repoFilter = useUIStore((s) => s.repoFilter);
+  const setRepoFilter = useUIStore((s) => s.setRepoFilter);
   const notificationsEnabled = useUIStore((s) => s.notificationsEnabled);
 
   const query = usePRs({ token, scope, orgs, notificationsEnabled });
@@ -53,11 +55,12 @@ export function Dashboard() {
     if (!query.data) return [];
     return filterPRs(query.data.prs, {
       query: searchQuery,
+      repoNameWithOwner: repoFilter,
       authorLogin: authorFilter?.login ?? null,
     });
-  }, [query.data, searchQuery, authorFilter]);
+  }, [query.data, searchQuery, authorFilter, repoFilter]);
 
-  const hasActiveFilter = Boolean(searchQuery.trim() || authorFilter);
+  const hasActiveFilter = Boolean(searchQuery.trim() || authorFilter || repoFilter);
 
   const buckets = useMemo(
     () => (hasActiveFilter ? bucketize(filtered) : query.data?.buckets ?? []),
@@ -254,11 +257,13 @@ export function Dashboard() {
                 <AllCaughtUp />
               ) : filtered.length === 0 && hasActiveFilter ? (
                 <NoFilterMatches
+                  repoFilter={repoFilter}
                   authorLogin={authorFilter?.login ?? null}
                   hasSearch={Boolean(searchQuery.trim())}
                   onClear={() => {
                     setAuthorFilter(null);
                     setSearchQuery('');
+                    setRepoFilter(null);
                   }}
                 />
               ) : (
@@ -310,15 +315,19 @@ export function Dashboard() {
 }
 
 function NoFilterMatches({
+  repoFilter,
   authorLogin,
   hasSearch,
   onClear,
 }: {
+  repoFilter: string | null;
   authorLogin: string | null;
   hasSearch: boolean;
   onClear: () => void;
 }) {
-  const description = authorLogin
+  const description = repoFilter
+    ? `No PRs in ${repoFilter} match the current filters.`
+    : authorLogin
     ? hasSearch
       ? `No PRs by @${authorLogin} match this search.`
       : `No PRs by @${authorLogin} are in the current Team result.`

@@ -1,3 +1,4 @@
+import { useUIStore } from '../store';
 import type { DashboardPR } from '../types/dashboard';
 
 interface SidebarProps {
@@ -11,6 +12,9 @@ export function Sidebar({
   viewerLogin,
   viewerAvatarUrl,
 }: SidebarProps) {
+  const repoFilter = useUIStore((s) => s.repoFilter);
+  const setRepoFilter = useUIStore((s) => s.setRepoFilter);
+
   // Exclude merged PRs from counts — Inbox/My PRs/Reviewing/repo
   // tallies are about *open* work, not historical activity.
   const open = prs.filter((p) => !p.isMerged);
@@ -25,8 +29,7 @@ export function Sidebar({
     );
   }
   const repos = Array.from(repoCounts.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8);
+    .sort((a, b) => b[1] - a[1]);
 
   const views = [
     { id: 'inbox', name: 'Inbox', count: open.length, active: true },
@@ -38,6 +41,7 @@ export function Sidebar({
     <aside
       style={{
         width: 228,
+        overflowY: 'auto',
         borderRight: '1px solid var(--line-1)',
         background: 'var(--bg-1)',
         flexShrink: 0,
@@ -155,14 +159,34 @@ export function Sidebar({
         />
       ))}
 
-      {repos.length > 0 && (
+      {(repos.length > 0 || repoFilter) && (
         <>
           <SidebarSection title="Repositories" action={`${repos.length}`} />
+          <SidebarItem
+            name="All repositories"
+            active={!repoFilter}
+            icon={<IconRepo />}
+            onClick={() => setRepoFilter(null)}
+          />
+          {repoFilter && !repoCounts.has(repoFilter) && (
+            <SidebarItem
+              name={repoFilter}
+              title={repoFilter}
+              active
+              count={0}
+              mono
+              icon={<IconRepo />}
+              onClick={() => setRepoFilter(null)}
+            />
+          )}
           {repos.map((r) => (
             <SidebarItem
               key={r[0]}
               name={r[0].split('/').pop() ?? r[0]}
               count={r[1]}
+              title={r[0]}
+              active={repoFilter === r[0]}
+              onClick={() => setRepoFilter(repoFilter === r[0] ? null : r[0])}
               mono
               icon={<IconRepo />}
             />
@@ -212,27 +236,40 @@ function SidebarItem({
   active,
   icon,
   mono,
+  title,
+  onClick,
 }: {
   name: string;
   count?: number;
   active?: boolean;
   icon: React.ReactNode;
   mono?: boolean;
+  title?: string;
+  onClick?: () => void;
 }) {
+  const Tag = onClick ? 'button' : 'div';
   return (
-    <div
+    <Tag
+      type={onClick ? 'button' : undefined}
+      title={title}
+      aria-label={onClick ? title ?? name : undefined}
+      aria-pressed={onClick ? Boolean(active) : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? (event) => event.stopPropagation() : undefined}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 9,
         height: 28,
         padding: '0 8px',
-        borderRadius: 5,
+        borderRadius: 'var(--r-1)',
+        border: 'none',
+        width: '100%',
+        flexShrink: 0,
+        textAlign: 'left',
+        cursor: onClick ? 'pointer' : 'default',
         background: active ? 'var(--bg-3)' : 'transparent',
         color: active ? 'var(--fg-0)' : 'var(--fg-1)',
-        // No cursor: pointer here — sidebar entries are read-only stats
-        // for now (only the inbox view exists). Don't hint at click
-        // affordance until they actually do something.
         position: 'relative',
       }}
     >
@@ -285,7 +322,7 @@ function SidebarItem({
           {count}
         </span>
       )}
-    </div>
+    </Tag>
   );
 }
 
