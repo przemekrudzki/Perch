@@ -55,7 +55,7 @@ function makeResponse(prs: GqlPullRequest[]): GqlDashboardResponse {
     reviewRequested: { nodes: [] },
     mergedAuthored: { nodes: [] },
     mergedReviewed: { nodes: [] },
-    rateLimit: { remaining: 5000, resetAt: new Date().toISOString() },
+    rateLimit: { cost: 1, remaining: 5000, resetAt: new Date().toISOString() },
   };
 }
 
@@ -527,7 +527,7 @@ describe('transformDashboard', () => {
       reviewRequested: { nodes: [] },
       mergedAuthored: { nodes: [] },
       mergedReviewed: { nodes: [mergedPR] },
-      rateLimit: { remaining: 5000, resetAt: new Date().toISOString() },
+      rateLimit: { cost: 1, remaining: 5000, resetAt: new Date().toISOString() },
     };
     const out = transformDashboard(res);
     expect(out.prs).toHaveLength(1);
@@ -550,7 +550,7 @@ describe('transformDashboard', () => {
       reviewRequested: { nodes: [] },
       mergedAuthored: { nodes: [pr] },
       mergedReviewed: { nodes: [pr] },
-      rateLimit: { remaining: 5000, resetAt: new Date().toISOString() },
+      rateLimit: { cost: 1, remaining: 5000, resetAt: new Date().toISOString() },
     };
     const out = transformDashboard(res);
     expect(out.prs).toHaveLength(1);
@@ -660,7 +660,7 @@ describe('transformDashboard', () => {
       mergedAuthored: { nodes: [pr] },
       mergedReviewed: { nodes: [pr] },
       mergedTeam: { nodes: [pr] },
-      rateLimit: { remaining: 5000, resetAt: new Date().toISOString() },
+      rateLimit: { cost: 1, remaining: 5000, resetAt: new Date().toISOString() },
     };
     const out = transformDashboard(res);
     expect(out.prs).toHaveLength(1);
@@ -748,7 +748,7 @@ describe('transformDashboard', () => {
       mergedAuthored: { nodes: [] },
       mergedReviewed: { nodes: [] },
       mergedTeam: { nodes: [teammateMerge] },
-      rateLimit: { remaining: 5000, resetAt: new Date().toISOString() },
+      rateLimit: { cost: 1, remaining: 5000, resetAt: new Date().toISOString() },
     };
     const out = transformDashboard(res);
     expect(out.prs).toHaveLength(1);

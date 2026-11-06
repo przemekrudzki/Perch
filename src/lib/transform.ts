@@ -1,3 +1,4 @@
+import type { PollingBudget } from './polling';
 import type {
   GqlDashboardResponse,
   GqlLabel,
@@ -475,7 +476,7 @@ export function buildTimeline(
 export function transformDashboard(res: GqlDashboardResponse): {
   viewer: { login: string; avatarUrl: string };
   prs: DashboardPR[];
-  rateLimit: { remaining: number; resetAt: string };
+  rateLimit: PollingBudget;
 } {
   const viewerLogin = res.viewer.login;
   const requestedIds = new Set<string>(

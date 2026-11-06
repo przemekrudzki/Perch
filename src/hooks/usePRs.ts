@@ -1,7 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import type { PollingBudget } from '../lib/polling';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { fetchDashboard, fetchMerged } from '../lib/github';
 import { transformDashboard } from '../lib/transform';
+import { createDashboardPolling, PollingPausedError } from '../lib/polling';
 import { bucketize } from '../lib/bucketing';
 import type { Bucket, DashboardPR } from '../types/dashboard';
 import type { Scope } from '../lib/storage';
@@ -10,7 +12,7 @@ export interface DashboardData {
   viewer: { login: string; avatarUrl: string };
   prs: DashboardPR[];
   buckets: Bucket[];
-  rateLimit: { remaining: number; resetAt: string };
+  rateLimit: PollingBudget;
   fetchedAt: number;
 }
 
@@ -27,20 +29,27 @@ export function usePRs({
   orgs,
   notificationsEnabled = false,
 }: Args) {
+  const polling = useMemo(() => createDashboardPolling(), [token]);
+  const [visible, setVisible] = useState(() => document.visibilityState !== 'hidden');
+  useEffect(() => {
+    const update = () => setVisible(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
   const effectiveScope: Scope = orgs.length === 0 ? 'inbox' : scope;
   const open = useQuery<DashboardData, Error>({
     queryKey: ['dashboard', token, effectiveScope, orgs.join(','), 'open'],
     enabled: Boolean(token),
-    refetchInterval: 60_000,
+    refetchInterval: () => polling.interval('open', visible ? 15_000 : 60_000),
     refetchIntervalInBackground: notificationsEnabled,
     refetchOnWindowFocus: true,
-    staleTime: 30_000,
+    staleTime: 15_000,
     queryFn: async () => {
       if (!token) throw new Error('Missing token');
-      const res = await fetchDashboard(token, {
+      const res = await polling.run('open', () => fetchDashboard(token, {
         scope: effectiveScope,
         orgs,
-      });
+      }));
       const { viewer, prs, rateLimit } = transformDashboard(res);
       return {
         viewer,
@@ -51,6 +60,7 @@ export function usePRs({
       };
     },
     retry: (failureCount, err) => {
+      if (err instanceof PollingPausedError) return false;
       const msg = String(err?.message ?? err);
       if (msg.toLowerCase().includes('bad credentials')) return false;
       if (msg.includes('401')) return false;
@@ -60,12 +70,12 @@ export function usePRs({
   const merged = useQuery({
     queryKey: ['dashboard', token, effectiveScope, orgs.join(','), 'merged'],
     enabled: Boolean(token),
-    refetchInterval: 5 * 60_000,
+    refetchInterval: () => polling.interval('merged', 5 * 60_000),
     refetchIntervalInBackground: notificationsEnabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
       if (!token) throw new Error('Missing token');
-      return transformDashboard(await fetchMerged(token, { scope: effectiveScope, orgs }));
+      return transformDashboard(await polling.run('merged', () => fetchMerged(token, { scope: effectiveScope, orgs })));
     },
     retry: false,
   });

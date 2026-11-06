@@ -175,7 +175,11 @@ src/
 
 - [`usePRs`](src/hooks/usePRs.ts) runs the
   [`PRDashboard` GraphQL query](src/lib/github.ts) with react-query's
-  `refetchInterval: 60_000`.
+  adaptive polling: every 15 seconds while visible, 60 seconds in the
+  background when notifications are enabled, and slower when the measured
+  GitHub query cost would exhaust the remaining budget. Recently merged PRs
+  refresh every five minutes (or slower under budget pressure). Rate-limit
+  responses pause dashboard requests until the retry window.
 - The raw response is flattened by
   [`transformDashboard`](src/lib/transform.ts) into `DashboardPR` domain
   objects — pre-computed `approvalCount`, `ciStatus`, `waitingTimeMs`, etc.

@@ -109,6 +109,7 @@ export const DASHBOARD_QUERY = /* GraphQL */ `
       }
     }
     rateLimit {
+      cost
       remaining
       resetAt
     }
@@ -410,7 +411,7 @@ export const MERGED_QUERY = /* GraphQL */ `
         ... on PullRequest { ...PRFields }
       }
     }
-    rateLimit { remaining resetAt }
+    rateLimit { cost remaining resetAt }
   }
   ${PR_SUMMARY_FIELDS}
 `;

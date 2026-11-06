@@ -1,3 +1,4 @@
+import type { PollingBudget } from '../lib/polling';
 // Hand-typed GraphQL response shapes for the PRDashboard query.
 // Kept narrow: only the fields we actually read.
 
@@ -157,5 +158,5 @@ export interface GqlDashboardResponse {
   mergedReviewed?: { nodes: GqlPRSummary[] };
   /** Present only when the @include(if: $includeTeam) branch is selected. */
   mergedTeam?: { nodes: GqlPRSummary[] };
-  rateLimit: { remaining: number; resetAt: string };
+  rateLimit: PollingBudget;
 }
